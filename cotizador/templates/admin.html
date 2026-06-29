@@ -408,6 +408,38 @@
     }
     .error-box span { font-size: 0.82rem; font-weight: 500; color: #f87171; }
 
+    /* ── Responsive móvil ── */
+    @media (max-width: 520px) {
+      .topbar {
+        padding: 14px 16px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .topbar-brand { font-size: 1.2rem; letter-spacing: 2px; }
+      .topbar-sub   { font-size: 0.58rem; }
+      .topbar-badge { font-size: 0.55rem; padding: 3px 8px; letter-spacing: 1px; margin-left: 0; }
+      .topbar-divider { display: none; }
+
+      .tc-manual-row {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .tc-manual-row label { width: 100%; }
+      #tcManualInput       { max-width: none; flex: 1; }
+      .tc-unit             { white-space: nowrap; }
+      #btnLimpiarManual    { margin-left: auto; }
+
+      .hint { font-size: 0.65rem; }
+
+      .main { padding: 24px 12px 60px; gap: 12px; }
+      .panel-header { padding: 14px 16px; }
+      .tc-body      { padding: 16px; }
+      .details      { padding: 0 16px; }
+      .result-top   { padding: 16px; }
+      .price-hero   { padding: 24px 16px; }
+      .price-amount { font-size: 2.2rem; }
+    }
+
     /* ── Footer ── */
     .footer {
       width: 100%;
