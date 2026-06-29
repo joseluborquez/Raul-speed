@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cotizador OEM — Raulspeed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --negro:       #000000;
+      --negro-card:  #111111;
+      --negro-input: #1a1a1a;
+      --borde:       #2a2a2a;
+      --rojo:        #cc0000;
+      --rojo-dark:   #aa0000;
+      --blanco:      #ffffff;
+      --texto-claro: #cccccc;
+      --texto-muted: #666666;
+    }
+
+    body {
+      font-family: 'Montserrat', 'Segoe UI', sans-serif;
+      background: var(--negro);
+      color: var(--blanco);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      width: 100%;
+      background: var(--negro);
+      border-bottom: 1px solid var(--borde);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .topbar-brand {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .topbar-brand span { color: var(--rojo); }
+    .topbar-divider { width: 1px; height: 28px; background: var(--borde); }
+    .topbar-sub {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+    }
+
+    /* ── Main ── */
+    .main {
+      width: 100%;
+      max-width: 560px;
+      padding: 56px 16px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Heading ── */
+    .heading {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .heading-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--rojo);
+      border: 1px solid var(--rojo);
+      padding: 4px 12px;
+      margin-bottom: 16px;
+    }
+    .heading h1 {
+      font-size: 1.75rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+    .heading h1 em { font-style: normal; color: var(--rojo); }
+    .heading p {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+    }
+
+    /* ── Search card ── */
+    .search-card {
+      background: var(--negro-card);
+      border: 1px solid var(--borde);
+      width: 100%;
+      padding: 28px;
+    }
+    .input-row { display: flex; }
+
+    #partInput {
+      flex: 1;
+      background: var(--negro-input);
+      border: 1px solid var(--borde);
+      border-right: none;
+      padding: 14px 18px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--blanco);
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #partInput::placeholder { color: var(--texto-muted); letter-spacing: 1px; font-weight: 500; }
+    #partInput:focus { border-color: var(--rojo); }
+
+    #searchBtn {
+      background: var(--rojo);
+      color: var(--blanco);
+      border: 1px solid var(--rojo);
+      padding: 14px 28px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    #searchBtn:hover    { background: var(--rojo-dark); border-color: var(--rojo-dark); }
+    #searchBtn:active   { transform: scale(.98); }
+    #searchBtn:disabled { background: #2a2a2a; border-color: #2a2a2a; cursor: not-allowed; color: var(--texto-muted); }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+    }
+    .hint span { color: var(--texto-claro); }
+
+    /* ── Loader ── */
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      margin-top: 36px;
+      color: var(--texto-muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .loader.visible { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--borde);
+      border-top-color: var(--rojo);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result card ── */
+    .result-card {
+      display: none;
+      background: var(--negro-card);
+      border: 1px solid var(--borde);
+      width: 100%;
+      margin-top: 16px;
+      animation: fadeIn .25s ease;
+    }
+    .result-card.visible { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+    /* ── Price hero ── */
+    .price-hero {
+      padding: 40px 28px;
+      text-align: center;
+      background: #0d0d0d;
+      border-bottom: 1px solid var(--borde);
+    }
+    .price-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+      margin-bottom: 12px;
+    }
+    .price-amount {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: var(--rojo);
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .price-currency {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--texto-muted);
+      margin-left: 6px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Info rows ── */
+    .info-rows { padding: 0 28px; }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .key {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+    }
+    .info-row .value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--texto-claro);
+    }
+
+    /* ── Error ── */
+    .error-box {
+      display: none;
+      background: rgba(127,29,29,.15);
+      border: 1px solid #7f1d1d;
+      width: 100%;
+      padding: 20px 28px;
+      margin-top: 16px;
+      animation: fadeIn .25s ease;
+    }
+    .error-box.visible { display: block; }
+    .error-box strong {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #fca5a5;
+      margin-bottom: 6px;
+    }
+    .error-box span { font-size: 0.82rem; font-weight: 500; color: #f87171; }
+
+    /* ── Footer ── */
+    .footer {
+      width: 100%;
+      border-top: 1px solid var(--borde);
+      padding: 20px 32px;
+      text-align: center;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--texto-muted);
+      margin-top: auto;
+    }
+    .footer span { color: var(--rojo); }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-brand">Raul<span>Speed</span></div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-sub">Cotizador de Repuestos</div>
+  </header>
+
+  <div class="main">
+
+    <div class="heading">
+      <div class="heading-tag">Repuestos OEM</div>
+      <h1>Cotizador de<br><em>Repuestos Japoneses</em></h1>
+      <p>Importación directa · Precio en Peso Chileno</p>
+    </div>
+
+    <div class="search-card">
+      <div class="input-row">
+        <input id="partInput" type="text" placeholder="Ej: 13568-19145"
+               autocomplete="off" autocapitalize="characters" />
+        <button id="searchBtn" onclick="buscar()">Cotizar</button>
+      </div>
+      <p class="hint">Ingresa el número de parte OEM · <span>Solo piezas genuinas</span></p>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <span>Consultando…</span>
+    </div>
+
+    <div class="error-box" id="errorBox">
+      <strong id="errorTitle">Error</strong>
+      <span id="errorMsg"></span>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <div class="price-hero">
+        <div class="price-label">Precio en Peso Chileno</div>
+        <div>
+          <span class="price-amount" id="rPrecioClp">—</span>
+          <span class="price-currency">CLP</span>
+        </div>
+      </div>
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="key">Fabricante</span>
+          <span class="value" id="rMaker">—</span>
+        </div>
+        <div class="info-row">
+          <span class="key">Fecha consulta</span>
+          <span class="value" id="rFecha">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    <span>Raulspeed</span> · Importación directa de repuestos originales
+  </footer>
+
+  <script>
+    const input = document.getElementById('partInput');
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') buscar(); });
+
+    function fmt(n) { return new Intl.NumberFormat('es-CL').format(n); }
+
+    function setLoading(on) {
+      document.getElementById('searchBtn').disabled = on;
+      document.getElementById('loader').classList.toggle('visible', on);
+      if (on) {
+        document.getElementById('resultCard').classList.remove('visible');
+        document.getElementById('errorBox').classList.remove('visible');
+      }
+    }
+
+    function showError(title, msg) {
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMsg').textContent = msg;
+      document.getElementById('errorBox').classList.add('visible');
+    }
+
+    function showResult(d) {
+      document.getElementById('rPrecioClp').textContent = fmt(d.precio_clp_final);
+      document.getElementById('rMaker').textContent = d.maker || '—';
+      document.getElementById('rFecha').textContent = d.fecha;
+      document.getElementById('resultCard').classList.add('visible');
+    }
+
+    async function buscar() {
+      const part = input.value.trim().toUpperCase();
+      if (!part) { input.focus(); return; }
+      setLoading(true);
+      let data;
+      try {
+        const res = await fetch('/cotizar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ part_number: part }),
+        });
+        data = await res.json();
+      } catch {
+        setLoading(false);
+        showError('Error de conexión', 'Verifica que el servidor esté corriendo.');
+        return;
+      }
+      setLoading(false);
+      if (data.estado === 'ok') showResult(data);
+      else if (data.estado === 'no_encontrado') showError('Repuesto no encontrado', data.mensaje);
+      else showError('Error en la búsqueda', data.mensaje || 'Intenta nuevamente.');
+    }
+  </script>
+</body>
+</html>
