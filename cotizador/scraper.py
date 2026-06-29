@@ -13,7 +13,12 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+
+try:
+    from playwright.sync_api import sync_playwright
+    _PLAYWRIGHT_OK = True
+except Exception:
+    _PLAYWRIGHT_OK = False
 
 from config import (
     FUENTES_HABILITADAS,
@@ -260,6 +265,10 @@ def _extraer_nombre_producto(element, fallback: str) -> str:
 
 def buscar_yumbo(part_number: str) -> Optional[dict]:
     """Scraping de Yumbo Japan con Playwright. Acceso público, sin autenticación."""
+    if not _PLAYWRIGHT_OK:
+        logger.warning("[yumbo] Playwright no disponible en este entorno — saltando.")
+        return None
+
     base_url = PROVEEDOR_ALTERNATIVO.rstrip("/")
 
     for variante in _normalizar(part_number):
