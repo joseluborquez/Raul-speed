@@ -93,6 +93,42 @@ export default function Home() {
           </p>
         </div>
 
+        <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
+          <div className={styles.spinner} />
+          <span>Consultando…</span>
+        </div>
+
+        {error && (
+          <div className={`${styles.errorBox} ${styles.visible}`}>
+            <strong>{error.title}</strong>
+            <span>{error.msg}</span>
+          </div>
+        )}
+
+        {resultado && resultado.estado === "ok" && (
+          <div className={`${styles.resultCard} ${styles.visible}`}>
+            <div className={styles.priceHero}>
+              <div className={styles.priceLabel}>Precio en Peso Chileno</div>
+              <div>
+                <span className={styles.priceAmount}>
+                  {fmt(resultado.precioClpFinal ?? 0)}
+                </span>
+                <span className={styles.priceCurrency}>CLP · IVA incluido</span>
+              </div>
+            </div>
+            <div className={styles.infoRows}>
+              <div className={styles.infoRow}>
+                <span className={styles.key}>Fabricante</span>
+                <span className={styles.value}>{resultado.maker || "—"}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.key}>Fecha consulta</span>
+                <span className={styles.value}>{resultado.fecha}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={styles.noticeCard}>
           <div className={styles.noticeTitle}>⚠️ Importante: sobrecargo por volumen</div>
           <p className={styles.noticeText}>
@@ -116,42 +152,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
-          <div className={styles.spinner} />
-          <span>Consultando…</span>
-        </div>
-
-        {error && (
-          <div className={`${styles.errorBox} ${styles.visible}`}>
-            <strong>{error.title}</strong>
-            <span>{error.msg}</span>
-          </div>
-        )}
-
-        {resultado && resultado.estado === "ok" && (
-          <div className={`${styles.resultCard} ${styles.visible}`}>
-            <div className={styles.priceHero}>
-              <div className={styles.priceLabel}>Precio en Peso Chileno</div>
-              <div>
-                <span className={styles.priceAmount}>
-                  {fmt(resultado.precioClpFinal ?? 0)}
-                </span>
-                <span className={styles.priceCurrency}>CLP</span>
-              </div>
-            </div>
-            <div className={styles.infoRows}>
-              <div className={styles.infoRow}>
-                <span className={styles.key}>Fabricante</span>
-                <span className={styles.value}>{resultado.maker || "—"}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span className={styles.key}>Fecha consulta</span>
-                <span className={styles.value}>{resultado.fecha}</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className={styles.footer}>
