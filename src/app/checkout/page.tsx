@@ -403,8 +403,12 @@ export default function CheckoutPage() {
                 >
                   Webpay
                 </button>
-                <button className={styles.paymentBtn} disabled>
-                  Flow <span className={styles.paymentBtnSoon}>Próximamente</span>
+                <button
+                  className={styles.paymentBtn}
+                  disabled={procesando}
+                  onClick={() => pagarCon("flow")}
+                >
+                  Flow
                 </button>
               </div>
             </div>
