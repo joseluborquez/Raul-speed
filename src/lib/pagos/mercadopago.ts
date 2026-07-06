@@ -15,7 +15,10 @@ export async function crearPago({
   returnBaseUrl,
 }: CrearPagoInput): Promise<CrearPagoResultado> {
   const preference = new Preference(getClient());
-  const confirmacionUrl = `${returnBaseUrl}/checkout/confirmacion?pedido=${pedidoId}`;
+  // Pasa por una ruta API (en vez de apuntar directo a la página de
+  // confirmación) para no depender de que Mercado Pago vuelva siempre
+  // con GET — mismo problema que ya vimos con Webpay y Flow.
+  const confirmacionUrl = `${returnBaseUrl}/api/pagos/mercadopago/return?pedido=${pedidoId}`;
 
   const result = await preference.create({
     body: {
