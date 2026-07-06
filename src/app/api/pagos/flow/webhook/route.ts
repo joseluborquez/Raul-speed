@@ -3,12 +3,15 @@ import { FLOW_STATUS, verificarPago } from "@/lib/pagos/flow";
 import { marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
 
 /**
- * urlConfirmation de Flow: llega un POST con solo el token. Nunca se
- * confía en el payload — siempre se vuelve a consultar payment/getStatus.
+ * urlConfirmation de Flow: llega un token (por POST habitualmente, pero
+ * se acepta también por query string en GET para no repetir la sorpresa
+ * que tuvimos con Webpay). Nunca se confía en el payload — siempre se
+ * vuelve a consultar payment/getStatus.
  */
-export async function POST(request: Request) {
+async function manejarWebhook(request: Request): Promise<Response> {
+  const url = new URL(request.url);
   const form = await request.formData().catch(() => null);
-  const token = form?.get("token")?.toString();
+  const token = form?.get("token")?.toString() ?? url.searchParams.get("token");
 
   if (!token) {
     return NextResponse.json({ ok: true });
@@ -34,3 +37,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export const GET = manejarWebhook;
+export const POST = manejarWebhook;

@@ -38,7 +38,10 @@ export async function crearPago(
     amount: String(Math.round(totalClp)),
     email,
     urlConfirmation: `${returnBaseUrl}/api/pagos/flow/webhook`,
-    urlReturn: `${returnBaseUrl}/checkout/confirmacion?pedido=${pedidoId}`,
+    // Flow redirige al navegador con POST — no puede apuntar directo a la
+    // página de confirmación (solo acepta GET), por eso pasa primero por
+    // esta ruta API que redirige (303) a la página.
+    urlReturn: `${returnBaseUrl}/api/pagos/flow/return?pedido=${pedidoId}`,
   };
   const s = firmarParametrosFlow(params, secretKey);
 
