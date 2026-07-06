@@ -151,6 +151,49 @@
   color: var(--texto-claro);
 }
 
+/* Aviso de sobrecargo por volumen */
+.noticeCard {
+  background: var(--negro-card);
+  border: 1px solid #92400e;
+  width: 100%;
+  margin-top: 16px;
+  padding: 24px 28px;
+}
+.noticeTitle {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #fbbf24;
+  margin-bottom: 14px;
+}
+.noticeText {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--texto-claro);
+  line-height: 1.5;
+}
+.noticeText + .noticeText {
+  margin-top: 8px;
+}
+.noticeList {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.noticeListItem {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--texto-claro);
+  line-height: 1.4;
+}
+.noticeList a {
+  color: var(--rojo);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
 /* Loader */
 .loader {
   display: none;
@@ -319,6 +362,9 @@
 
   .searchCard {
     padding: 20px 16px;
+  }
+  .noticeCard {
+    padding: 18px 16px;
   }
   .partInput {
     font-size: 0.9rem;

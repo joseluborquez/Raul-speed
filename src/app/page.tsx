@@ -93,6 +93,30 @@ export default function Home() {
           </p>
         </div>
 
+        <div className={styles.noticeCard}>
+          <div className={styles.noticeTitle}>⚠️ Importante: sobrecargo por volumen</div>
+          <p className={styles.noticeText}>
+            El precio cotizado corresponde a repuestos OEM 100% originales de tamaño y peso
+            estándar.
+          </p>
+          <p className={styles.noticeText}>
+            Repuestos de alto volumen (carenados, estanques, basculantes, llantas, cigüeñales,
+            entre otros) tienen un sobrecargo por envío internacional.
+          </p>
+          <div className={styles.noticeList}>
+            <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
+            <div className={styles.noticeListItem}>
+              📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
+            </div>
+            <div className={styles.noticeListItem}>
+              📞 Atención especializada: WhatsApp{" "}
+              <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
+                +56 9 5415 6358
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
           <div className={styles.spinner} />
           <span>Consultando…</span>
