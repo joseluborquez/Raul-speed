@@ -146,12 +146,6 @@ export default function Home() {
                 <span className={styles.value}>{resultado.maker || "—"}</span>
               </div>
               <div className={styles.infoRow}>
-                <span className={styles.key}>Costo por logística</span>
-                <span className={styles.value}>
-                  ${fmt(resultado.costoLogisticaClp ?? 0)} CLP
-                </span>
-              </div>
-              <div className={styles.infoRow}>
                 <span className={styles.key}>Fecha consulta</span>
                 <span className={styles.value}>{resultado.fecha}</span>
               </div>
