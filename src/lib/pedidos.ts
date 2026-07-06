@@ -1,17 +1,7 @@
 import { createAdminClient } from "./supabase/admin";
+import type { MetodoEnvio } from "./metodoEnvio";
 
-export type MetodoEnvio =
-  | "starken_domicilio"
-  | "starken_retiro"
-  | "chilexpress_domicilio"
-  | "chilexpress_retiro"
-  | "correoschile_domicilio"
-  | "correoschile_retiro"
-  | "bluexpress_domicilio"
-  | "bluexpress_retiro"
-  | "retiro_tome"
-  | "otro";
-
+export type { MetodoEnvio } from "./metodoEnvio";
 export type MetodoPago = "mercadopago" | "webpay" | "flow";
 export type EstadoPedido = "pendiente" | "pagado" | "fallido" | "expirado";
 
@@ -158,4 +148,20 @@ export async function marcarPedidoFallido(
     .update({ estado: "fallido", raw_provider_payload: rawProviderPayload })
     .eq("id", pedidoId)
     .eq("estado", "pendiente");
+}
+
+/**
+ * Lista los pedidos más recientes para el panel admin. Se llama solo
+ * desde una ruta ya protegida por sesión (ver /api/admin/pedidos).
+ */
+export async function listarPedidos() {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) throw new Error(error.message);
+  return data;
 }

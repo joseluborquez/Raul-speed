@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CARRITO_STORAGE_KEY, type CarritoStorage } from "@/lib/carrito";
+import { METODO_ENVIO_LABELS } from "@/lib/metodoEnvio";
 import { validarRut } from "@/lib/rut";
 import styles from "./checkout.module.css";
 
@@ -10,18 +11,10 @@ function fmt(n: number): string {
   return new Intl.NumberFormat("es-CL").format(n);
 }
 
-const OPCIONES_ENVIO: { value: string; label: string }[] = [
-  { value: "starken_domicilio", label: "Starken — Despacho a domicilio" },
-  { value: "starken_retiro", label: "Retiro en sucursal — Starken" },
-  { value: "chilexpress_domicilio", label: "Chilexpress — Despacho a domicilio" },
-  { value: "chilexpress_retiro", label: "Retiro en sucursal — Chilexpress" },
-  { value: "correoschile_domicilio", label: "Correos de Chile — Despacho a domicilio" },
-  { value: "correoschile_retiro", label: "Retiro en sucursal — Correos de Chile" },
-  { value: "bluexpress_domicilio", label: "Bluexpress — Despacho a domicilio" },
-  { value: "bluexpress_retiro", label: "Retiro en sucursal — Bluexpress" },
-  { value: "retiro_tome", label: "Retiro en tienda en Tomé" },
-  { value: "otro", label: "Otro" },
-];
+const OPCIONES_ENVIO = Object.entries(METODO_ENVIO_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
 
 interface FormState {
   nombreCompleto: string;

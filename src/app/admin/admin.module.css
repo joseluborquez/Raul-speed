@@ -379,6 +379,96 @@
   border-color: #7f1d1d;
   background: rgba(127, 29, 29, 0.2);
 }
+.badge.pending {
+  color: #fbbf24;
+  border-color: #92400e;
+  background: rgba(120, 53, 15, 0.2);
+}
+
+/* Pedidos */
+.pedidoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #1a1a1a;
+  cursor: pointer;
+}
+.pedidoRow:last-child {
+  border-bottom: none;
+}
+.pedidoRow:hover {
+  background: #161616;
+}
+.pedidoRowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pedidoRowNombre {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--blanco);
+}
+.pedidoRowMeta {
+  font-size: 0.65rem;
+  color: var(--texto-muted);
+  letter-spacing: 0.5px;
+}
+.pedidoRowRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.pedidoRowTotal {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--rojo);
+  white-space: nowrap;
+}
+.pedidoDetalle {
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid #1a1a1a;
+  background: #0d0d0d;
+}
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--borde);
+}
+.filterBtn {
+  background: transparent;
+  border: 1px solid var(--borde);
+  color: var(--texto-muted);
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.filterBtn:hover {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+.filterBtnActive {
+  border-color: var(--rojo);
+  color: var(--rojo);
+  background: rgba(204, 0, 0, 0.1);
+}
+.emptyMsg {
+  padding: 24px;
+  text-align: center;
+  color: var(--texto-muted);
+  font-size: 0.8rem;
+}
 
 .priceHero {
   padding: 32px 24px;

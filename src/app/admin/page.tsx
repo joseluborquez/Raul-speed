@@ -402,6 +402,7 @@ export default function AdminPage() {
 
       <footer className={styles.footer}>
         <span>Raulspeed</span> · Panel Administrador ·{" "}
+        <Link href="/admin/pedidos">Ver pedidos</Link> ·{" "}
         <Link href="/">Ver vista cliente</Link>
       </footer>
     </>
