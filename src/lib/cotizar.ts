@@ -6,7 +6,7 @@ import { getSettings } from "./settings";
 
 export interface ResultadoCotizacion {
   partNumber: string;
-  estado: "ok" | "no_encontrado" | "error_tipo_cambio";
+  estado: "ok" | "no_encontrado" | "error_tipo_cambio" | "error_proveedor";
   mensaje?: string;
   maker?: string;
   nombre?: string;
@@ -32,7 +32,17 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   const partNumber = partNumberInput.trim().toUpperCase();
 
   // 1. Obtener precio JPY desde Impex Japan.
-  const resultadoImpex = await buscarImpexApi(partNumber);
+  let resultadoImpex;
+  try {
+    resultadoImpex = await buscarImpexApi(partNumber);
+  } catch (exc) {
+    return {
+      partNumber,
+      estado: "error_proveedor",
+      mensaje: exc instanceof Error ? exc.message : String(exc),
+      fecha: hoyIso(),
+    };
+  }
 
   if (resultadoImpex === null) {
     return {

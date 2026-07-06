@@ -65,30 +65,32 @@ async function impexApiFetch(partNumber: string): Promise<ImpexResultado | null>
     price_increase: "0",
   });
 
-  try {
-    const resp = await fetch(`${IMPEX_API_URL}?${params.toString()}`, {
-      headers: HEADERS,
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!resp.ok) return null;
-    const data = await resp.json();
+  const resp = await fetch(`${IMPEX_API_URL}?${params.toString()}`, {
+    headers: HEADERS,
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!resp.ok) throw new Error(`Impex respondió con estado ${resp.status}`);
 
-    for (const part of data?.original_parts ?? []) {
-      if (part.is_discontinued) continue;
+  const data = await resp.json();
 
-      const precioJpy = part.price_yen;
-      if (!precioJpy || precioJpy <= 0) continue;
+  // Impex puede responder 200 con un {"error": "..."} en vez de resultados
+  // (ej. clave suspendida, cuenta marcada para revisión) — eso no es lo
+  // mismo que "no encontrado" y no debe tratarse como tal.
+  if (data?.error) throw new Error(`Impex: ${data.error}`);
 
-      return {
-        precioJpy: Math.trunc(precioJpy),
-        fuente: "impex-jp.com",
-        maker: part.mark ?? "",
-        nombre: part.name_eng || part.name || "",
-        esGenuino: true,
-      };
-    }
-    return null;
-  } catch {
-    return null;
+  for (const part of data?.original_parts ?? []) {
+    if (part.is_discontinued) continue;
+
+    const precioJpy = part.price_yen;
+    if (!precioJpy || precioJpy <= 0) continue;
+
+    return {
+      precioJpy: Math.trunc(precioJpy),
+      fuente: "impex-jp.com",
+      maker: part.mark ?? "",
+      nombre: part.name_eng || part.name || "",
+      esGenuino: true,
+    };
   }
+  return null;
 }
