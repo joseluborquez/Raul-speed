@@ -4,6 +4,14 @@ import { useRef, useState } from "react";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
 import styles from "./page.module.css";
 
+interface ItemCotizacion {
+  id: string;
+  partNumber: string;
+  maker?: string;
+  nombre?: string;
+  precioRepuestoClp: number;
+}
+
 function fmt(n: number): string {
   return new Intl.NumberFormat("es-CL").format(n);
 }
@@ -13,6 +21,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
   const [error, setError] = useState<{ title: string; msg: string } | null>(null);
+
+  const [items, setItems] = useState<ItemCotizacion[]>([]);
+  const [costoLogisticaClp, setCostoLogisticaClp] = useState(0);
 
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
@@ -45,12 +56,41 @@ export default function Home() {
     setLoading(false);
     if (data.estado === "ok") {
       setResultado(data);
+      setCostoLogisticaClp(data.costoLogisticaClp ?? 0);
     } else if (data.estado === "no_encontrado") {
       setError({ title: "Repuesto no encontrado", msg: data.mensaje ?? "" });
     } else {
       setError({ title: "Error en la búsqueda", msg: data.mensaje ?? "Intenta nuevamente." });
     }
   }
+
+  function agregarALaCotizacion() {
+    if (!resultado || resultado.estado !== "ok") return;
+
+    setItems((prev) => [
+      ...prev,
+      {
+        id: `${resultado.partNumber}-${Date.now()}`,
+        partNumber: resultado.partNumber,
+        maker: resultado.maker,
+        nombre: resultado.nombre,
+        precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+      },
+    ]);
+
+    setResultado(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+  }
+
+  function quitarItem(id: string) {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  const subtotalRepuestos = items.reduce((sum, item) => sum + item.precioRepuestoClp, 0);
+  const totalCotizacion = subtotalRepuestos + (items.length > 0 ? costoLogisticaClp : 0);
 
   return (
     <>
@@ -124,6 +164,53 @@ export default function Home() {
               <div className={styles.infoRow}>
                 <span className={styles.key}>Fecha consulta</span>
                 <span className={styles.value}>{resultado.fecha}</span>
+              </div>
+            </div>
+            <div className={styles.addRow}>
+              <button className={styles.addBtn} onClick={agregarALaCotizacion}>
+                + Agregar a la cotización
+              </button>
+            </div>
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <div className={`${styles.cartCard} ${styles.visible}`}>
+            <div className={styles.cartHeader}>Repuestos agregados ({items.length})</div>
+            {items.map((item) => (
+              <div className={styles.cartItem} key={item.id}>
+                <div className={styles.cartItemInfo}>
+                  <span className={styles.cartItemPart}>{item.partNumber}</span>
+                  <span className={styles.cartItemName}>
+                    {[item.maker, item.nombre].filter(Boolean).join(" · ") || "—"}
+                  </span>
+                </div>
+                <div className={styles.cartItemRight}>
+                  <span className={styles.cartItemPrice}>
+                    ${fmt(item.precioRepuestoClp)}
+                  </span>
+                  <button
+                    className={styles.cartRemoveBtn}
+                    onClick={() => quitarItem(item.id)}
+                    aria-label={`Quitar ${item.partNumber}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className={styles.cartTotals}>
+              <div className={styles.cartTotalRow}>
+                <span>Subtotal repuestos</span>
+                <span>${fmt(subtotalRepuestos)} CLP</span>
+              </div>
+              <div className={styles.cartTotalRow}>
+                <span>Costo de logística (único)</span>
+                <span>${fmt(costoLogisticaClp)} CLP</span>
+              </div>
+              <div className={`${styles.cartTotalRow} ${styles.cartTotalFinal}`}>
+                <span>Total</span>
+                <span>${fmt(totalCotizacion)} CLP · IVA incluido</span>
               </div>
             </div>
           </div>
