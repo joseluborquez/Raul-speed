@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { METODO_ENVIO_LABELS, type MetodoEnvio } from "@/lib/metodoEnvio";
 import type { EstadoPedido, ItemPedido, MetodoPago } from "@/lib/pedidos";
+import { createClient } from "@/lib/supabase/client";
 import styles from "../admin.module.css";
 
 interface PedidoRow {
@@ -56,10 +58,18 @@ function badgeClass(estado: EstadoPedido): string {
 }
 
 export default function AdminPedidosPage() {
+  const router = useRouter();
   const [pedidos, setPedidos] = useState<PedidoRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<EstadoPedido | "todos">("todos");
   const [expandidoId, setExpandidoId] = useState<string | null>(null);
+
+  async function cerrarSesion() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/admin/login");
+    router.refresh();
+  }
 
   useEffect(() => {
     fetch("/api/admin/pedidos")
@@ -82,8 +92,21 @@ export default function AdminPedidosPage() {
           Raul<span>Speed</span>
         </div>
         <div className={styles.topbarDivider} />
-        <div className={styles.topbarSub}>Cotizador Interno</div>
+        <nav className={styles.topbarNav}>
+          <Link href="/admin" className={styles.topbarNavLink}>
+            Cotizador
+          </Link>
+          <Link
+            href="/admin/pedidos"
+            className={`${styles.topbarNavLink} ${styles.topbarNavLinkActive}`}
+          >
+            Pedidos
+          </Link>
+        </nav>
         <div className={styles.topbarBadge}>Administrador</div>
+        <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>
+          Cerrar sesión
+        </button>
       </header>
 
       <div className={styles.main}>
@@ -188,7 +211,7 @@ export default function AdminPedidosPage() {
 
       <footer className={styles.footer}>
         <span>Raulspeed</span> · Panel Administrador ·{" "}
-        <Link href="/admin">Volver</Link>
+        <Link href="/">Ver vista cliente</Link>
       </footer>
     </>
   );

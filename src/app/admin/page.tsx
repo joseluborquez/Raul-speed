@@ -202,7 +202,14 @@ export default function AdminPage() {
           Raul<span>Speed</span>
         </div>
         <div className={styles.topbarDivider} />
-        <div className={styles.topbarSub}>Cotizador Interno</div>
+        <nav className={styles.topbarNav}>
+          <Link href="/admin" className={`${styles.topbarNavLink} ${styles.topbarNavLinkActive}`}>
+            Cotizador
+          </Link>
+          <Link href="/admin/pedidos" className={styles.topbarNavLink}>
+            Pedidos
+          </Link>
+        </nav>
         <div className={styles.topbarBadge}>Administrador</div>
         <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>
           Cerrar sesión
@@ -402,7 +409,6 @@ export default function AdminPage() {
 
       <footer className={styles.footer}>
         <span>Raulspeed</span> · Panel Administrador ·{" "}
-        <Link href="/admin/pedidos">Ver pedidos</Link> ·{" "}
         <Link href="/">Ver vista cliente</Link>
       </footer>
     </>

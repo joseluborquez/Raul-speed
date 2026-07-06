@@ -29,6 +29,29 @@
   text-transform: uppercase;
   color: var(--texto-muted);
 }
+.topbarNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbarNavLink {
+  padding: 8px 14px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.topbarNavLink:hover {
+  color: var(--texto-claro);
+}
+.topbarNavLinkActive {
+  color: var(--blanco);
+  border-color: var(--rojo);
+}
 .topbarBadge {
   margin-left: auto;
   font-size: 0.6rem;
