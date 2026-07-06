@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./admin.module.css";
 
 function fmt(n: number): string {
@@ -10,12 +12,17 @@ function fmt(n: number): string {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   const partInputRef = useRef<HTMLInputElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
+  const logisticaInputRef = useRef<HTMLInputElement>(null);
 
   const [tcValor, setTcValor] = useState("Cargando…");
   const [tcFuente, setTcFuente] = useState("—");
   const [manualActivo, setManualActivo] = useState(false);
+
+  const [logisticaGuardando, setLogisticaGuardando] = useState(false);
+  const [logisticaMsg, setLogisticaMsg] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
@@ -39,8 +46,55 @@ export default function AdminPage() {
     }
   }
 
+  async function cargarLogistica() {
+    try {
+      const r = await fetch("/api/settings");
+      const d = await r.json();
+      if (logisticaInputRef.current) {
+        logisticaInputRef.current.value = String(d.costoLogisticaClp ?? 0);
+      }
+    } catch {
+      // se deja el campo vacío; el admin puede reintentar guardando.
+    }
+  }
+
+  async function guardarLogistica() {
+    const val = Number(logisticaInputRef.current?.value ?? "");
+    if (!Number.isFinite(val) || val < 0) {
+      setLogisticaMsg("Ingresa un valor válido");
+      return;
+    }
+
+    setLogisticaGuardando(true);
+    setLogisticaMsg(null);
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ costoLogisticaClp: val }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setLogisticaMsg(d.error || "No se pudo guardar");
+      } else {
+        setLogisticaMsg("Guardado");
+      }
+    } catch {
+      setLogisticaMsg("Error de conexión");
+    }
+    setLogisticaGuardando(false);
+  }
+
+  async function cerrarSesion() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/admin/login");
+    router.refresh();
+  }
+
   useEffect(() => {
     cargarTasa();
+    cargarLogistica();
   }, []);
 
   function onTcManualChange() {
@@ -110,6 +164,9 @@ export default function AdminPage() {
         <div className={styles.topbarDivider} />
         <div className={styles.topbarSub}>Cotizador Interno</div>
         <div className={styles.topbarBadge}>Administrador</div>
+        <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>
+          Cerrar sesión
+        </button>
       </header>
 
       <div className={styles.main}>
@@ -155,6 +212,39 @@ export default function AdminPage() {
                 Limpiar
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Costo de logística */}
+        <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
+          Costo de Logística
+        </div>
+        <div className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <span>Se suma a cada cotización</span>
+          </div>
+          <div className={styles.tcBody}>
+            <div className={styles.tcManualRow}>
+              <label htmlFor="logisticaInput">Costo logística</label>
+              <input
+                id="logisticaInput"
+                ref={logisticaInputRef}
+                className={styles.tcManualInput}
+                type="number"
+                step="1"
+                min="0"
+                placeholder="Ej: 15000"
+              />
+              <span className={styles.tcUnit}>CLP</span>
+              <button
+                className={styles.btnRefreshTasa}
+                disabled={logisticaGuardando}
+                onClick={guardarLogistica}
+              >
+                {logisticaGuardando ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
+            {logisticaMsg && <span className={styles.tcAutoFuente}>{logisticaMsg}</span>}
           </div>
         </div>
 
@@ -233,6 +323,18 @@ export default function AdminPage() {
               <div className={styles.detailRow}>
                 <span className={styles.key}>Fuente tipo de cambio</span>
                 <span className={styles.value}>{resultado.fuenteTipoCambio}</span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.key}>Precio repuesto (sin logística)</span>
+                <span className={styles.value}>
+                  ${fmt(resultado.precioRepuestoClp ?? 0)} CLP
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.key}>Costo logística</span>
+                <span className={styles.value}>
+                  ${fmt(resultado.costoLogisticaClp ?? 0)} CLP
+                </span>
               </div>
               <div className={styles.detailRow}>
                 <span className={styles.key}>Fuente precio</span>

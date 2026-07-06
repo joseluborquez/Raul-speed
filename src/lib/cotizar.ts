@@ -2,6 +2,7 @@
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
 import { buscarImpexApi } from "./impex";
+import { getCostoLogisticaClp } from "./settings";
 
 export interface ResultadoCotizacion {
   partNumber: string;
@@ -12,6 +13,8 @@ export interface ResultadoCotizacion {
   precioJpy?: number;
   tipoCambioClp?: number;
   fuenteTipoCambio?: string;
+  precioRepuestoClp?: number;
+  costoLogisticaClp?: number;
   precioClpFinal?: number;
   fuente?: string;
   esGenuino?: boolean;
@@ -69,8 +72,10 @@ export async function cotizar(
     }
   }
 
-  // 3. Aplicar fórmula de negocio.
-  const precioClpFinal = calcularPrecioClp(precioJpy, tipoCambio);
+  // 3. Aplicar fórmula de negocio y sumar el costo de logística.
+  const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
+  const costoLogisticaClp = await getCostoLogisticaClp();
+  const precioClpFinal = precioRepuestoClp + costoLogisticaClp;
 
   return {
     partNumber,
@@ -80,6 +85,8 @@ export async function cotizar(
     precioJpy,
     tipoCambioClp: Number(tipoCambio.toFixed(6)),
     fuenteTipoCambio: fuenteTc,
+    precioRepuestoClp,
+    costoLogisticaClp,
     precioClpFinal,
     fuente,
     esGenuino: resultadoImpex.esGenuino,
