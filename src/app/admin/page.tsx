@@ -20,6 +20,8 @@ export default function AdminPage() {
   const [tcValor, setTcValor] = useState("Cargando…");
   const [tcFuente, setTcFuente] = useState("—");
   const [manualActivo, setManualActivo] = useState(false);
+  const [manualGuardando, setManualGuardando] = useState(false);
+  const [manualMsg, setManualMsg] = useState<string | null>(null);
 
   const [logisticaGuardando, setLogisticaGuardando] = useState(false);
   const [logisticaMsg, setLogisticaMsg] = useState<string | null>(null);
@@ -46,15 +48,22 @@ export default function AdminPage() {
     }
   }
 
-  async function cargarLogistica() {
+  async function cargarSettings() {
     try {
       const r = await fetch("/api/settings");
       const d = await r.json();
       if (logisticaInputRef.current) {
         logisticaInputRef.current.value = String(d.costoLogisticaClp ?? 0);
       }
+      if (d.tipoCambioManual !== null && d.tipoCambioManual !== undefined) {
+        if (manualInputRef.current) manualInputRef.current.value = String(d.tipoCambioManual);
+        setManualActivo(true);
+      } else {
+        if (manualInputRef.current) manualInputRef.current.value = "";
+        setManualActivo(false);
+      }
     } catch {
-      // se deja el campo vacío; el admin puede reintentar guardando.
+      // se dejan los campos vacíos; el admin puede reintentar guardando.
     }
   }
 
@@ -85,6 +94,57 @@ export default function AdminPage() {
     setLogisticaGuardando(false);
   }
 
+  async function guardarManual() {
+    const val = Number(manualInputRef.current?.value ?? "");
+    if (!Number.isFinite(val) || val <= 0) {
+      setManualMsg("Ingresa una tasa válida");
+      return;
+    }
+
+    setManualGuardando(true);
+    setManualMsg(null);
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipoCambioManual: val }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setManualMsg(d.error || "No se pudo guardar");
+      } else {
+        setManualActivo(true);
+        setManualMsg("Guardado — se aplica a todas las cotizaciones");
+      }
+    } catch {
+      setManualMsg("Error de conexión");
+    }
+    setManualGuardando(false);
+  }
+
+  async function limpiarManual() {
+    setManualGuardando(true);
+    setManualMsg(null);
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipoCambioManual: null }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setManualMsg(d.error || "No se pudo desactivar");
+      } else {
+        if (manualInputRef.current) manualInputRef.current.value = "";
+        setManualActivo(false);
+        setManualMsg("Vuelto a automático");
+      }
+    } catch {
+      setManualMsg("Error de conexión");
+    }
+    setManualGuardando(false);
+  }
+
   async function cerrarSesion() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -94,24 +154,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     cargarTasa();
-    cargarLogistica();
+    cargarSettings();
   }, []);
-
-  function onTcManualChange() {
-    const val = manualInputRef.current?.value.trim() ?? "";
-    setManualActivo(Boolean(val) && parseFloat(val) > 0);
-  }
-
-  function limpiarManual() {
-    if (manualInputRef.current) manualInputRef.current.value = "";
-    setManualActivo(false);
-  }
-
-  function getOverride(): number | null {
-    const val = manualInputRef.current?.value.trim() ?? "";
-    const n = parseFloat(val);
-    return val && n > 0 ? n : null;
-  }
 
   async function buscar() {
     const part = partInputRef.current?.value.trim().toUpperCase() ?? "";
@@ -126,14 +170,10 @@ export default function AdminPage() {
 
     let data: ResultadoCotizacion;
     try {
-      const override = getOverride();
       const res = await fetch("/api/cotizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          partNumber: part,
-          ...(override ? { tipoCambioOverride: override } : {}),
-        }),
+        body: JSON.stringify({ partNumber: part }),
       });
       data = await res.json();
     } catch {
@@ -186,7 +226,7 @@ export default function AdminPage() {
           <div className={styles.tcBody}>
             <div className={styles.tcAutoRow}>
               <div className={styles.tcAutoInfo}>
-                <span className={styles.tcAutoLabel}>Tasa actual</span>
+                <span className={styles.tcAutoLabel}>Tasa actual (Banco Central)</span>
                 <span className={styles.tcAutoValue}>{tcValor}</span>
                 <span className={styles.tcAutoFuente}>{tcFuente}</span>
               </div>
@@ -205,13 +245,24 @@ export default function AdminPage() {
                 step="0.000001"
                 min="0"
                 placeholder="Ej: 5.85"
-                onInput={onTcManualChange}
               />
               <span className={styles.tcUnit}>CLP / JPY</span>
-              <button className={styles.btnLimpiarManual} onClick={limpiarManual}>
+              <button
+                className={styles.btnRefreshTasa}
+                disabled={manualGuardando}
+                onClick={guardarManual}
+              >
+                {manualGuardando ? "Guardando…" : "Guardar"}
+              </button>
+              <button
+                className={styles.btnLimpiarManual}
+                disabled={manualGuardando}
+                onClick={limpiarManual}
+              >
                 Limpiar
               </button>
             </div>
+            {manualMsg && <span className={styles.tcAutoFuente}>{manualMsg}</span>}
           </div>
         </div>
 

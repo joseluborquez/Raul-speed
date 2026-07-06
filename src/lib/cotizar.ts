@@ -2,7 +2,7 @@
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
 import { buscarImpexApi } from "./impex";
-import { getCostoLogisticaClp } from "./settings";
+import { getSettings } from "./settings";
 
 export interface ResultadoCotizacion {
   partNumber: string;
@@ -28,10 +28,7 @@ function hoyIso(): string {
 /**
  * Cotiza una pieza OEM dado su número de parte.
  */
-export async function cotizar(
-  partNumberInput: string,
-  tipoCambioOverride?: number | null,
-): Promise<ResultadoCotizacion> {
+export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
 
   // 1. Obtener precio JPY desde Impex Japan.
@@ -49,11 +46,15 @@ export async function cotizar(
   const { precioJpy, fuente } = resultadoImpex;
 
   // 2. Obtener tipo de cambio JPY → CLP.
+  // Si el admin fijó una tasa manual (global, en Supabase), se usa para
+  // todas las cotizaciones; si no, se consulta el Banco Central.
+  const { costoLogisticaClp, tipoCambioManual } = await getSettings();
+
   let tipoCambio: number;
   let fuenteTc: string;
 
-  if (tipoCambioOverride) {
-    tipoCambio = tipoCambioOverride;
+  if (tipoCambioManual !== null) {
+    tipoCambio = tipoCambioManual;
     fuenteTc = "Manual (administrador)";
   } else {
     try {
@@ -74,7 +75,6 @@ export async function cotizar(
 
   // 3. Aplicar fórmula de negocio y sumar el costo de logística.
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
-  const costoLogisticaClp = await getCostoLogisticaClp();
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp;
 
   return {

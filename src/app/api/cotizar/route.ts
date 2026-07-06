@@ -12,12 +12,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const rawOverride = data?.tipoCambioOverride;
-  const override =
-    rawOverride !== undefined && rawOverride !== null && !Number.isNaN(Number(rawOverride))
-      ? Number(rawOverride)
-      : null;
-
-  const resultado = await cotizar(partNumber, override);
+  const resultado = await cotizar(partNumber);
   return NextResponse.json(resultado);
 }

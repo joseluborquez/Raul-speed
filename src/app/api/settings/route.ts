@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCostoLogisticaClp, updateCostoLogisticaClp } from "@/lib/settings";
+import { getSettings, updateCostoLogisticaClp, updateTipoCambioManual } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const costoLogisticaClp = await getCostoLogisticaClp();
-  return NextResponse.json({ costoLogisticaClp });
+  const settings = await getSettings();
+  return NextResponse.json(settings);
 }
 
 export async function PUT(request: Request) {
@@ -18,12 +18,28 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const valor = Number(body?.costoLogisticaClp);
 
-  if (!Number.isFinite(valor) || valor < 0) {
-    return NextResponse.json({ error: "Valor inválido" }, { status: 400 });
+  if ("costoLogisticaClp" in body) {
+    const valor = Number(body.costoLogisticaClp);
+    if (!Number.isFinite(valor) || valor < 0) {
+      return NextResponse.json({ error: "Costo de logística inválido" }, { status: 400 });
+    }
+    await updateCostoLogisticaClp(valor);
   }
 
-  await updateCostoLogisticaClp(valor);
-  return NextResponse.json({ costoLogisticaClp: valor });
+  if ("tipoCambioManual" in body) {
+    const raw = body.tipoCambioManual;
+    if (raw === null) {
+      await updateTipoCambioManual(null);
+    } else {
+      const valor = Number(raw);
+      if (!Number.isFinite(valor) || valor <= 0) {
+        return NextResponse.json({ error: "Tasa manual inválida" }, { status: 400 });
+      }
+      await updateTipoCambioManual(valor);
+    }
+  }
+
+  const settings = await getSettings();
+  return NextResponse.json(settings);
 }
