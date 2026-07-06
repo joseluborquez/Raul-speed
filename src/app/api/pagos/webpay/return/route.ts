@@ -3,12 +3,15 @@ import { commitPago } from "@/lib/pagos/webpay";
 import { getPedidoEstado, marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
 
 /**
- * Transbank redirige al navegador con un POST a esta URL después del
- * pago (o del abandono). No hay webhook separado: commit() ES la
- * verificación. Si en vez de token_ws llega TBK_TOKEN, el usuario
- * abandonó el flujo antes de confirmar y no hay que llamar a commit().
+ * Transbank redirige al navegador a esta URL después del pago (o del
+ * abandono) — en la práctica lo hace con GET y token_ws como parámetro
+ * de la URL, aunque la documentación clásica describe un POST con
+ * form data; se acepta cualquiera de los dos. No hay webhook separado:
+ * commit() ES la verificación. Si en vez de token_ws llega TBK_TOKEN,
+ * el usuario abandonó el flujo antes de confirmar y no hay que llamar
+ * a commit().
  */
-export async function POST(request: Request) {
+async function manejarRetorno(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const pedidoId = url.searchParams.get("pedido");
   const destino = pedidoId
@@ -26,8 +29,8 @@ export async function POST(request: Request) {
   }
 
   const form = await request.formData().catch(() => null);
-  const tokenWs = form?.get("token_ws")?.toString();
-  const tbkToken = form?.get("TBK_TOKEN")?.toString();
+  const tokenWs = form?.get("token_ws")?.toString() ?? url.searchParams.get("token_ws");
+  const tbkToken = form?.get("TBK_TOKEN")?.toString() ?? url.searchParams.get("TBK_TOKEN");
 
   if (!tokenWs) {
     await marcarPedidoFallido(pedidoId, { abandonado: true, tbkToken: tbkToken ?? null });
@@ -51,3 +54,6 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(destino, 303);
 }
+
+export const GET = manejarRetorno;
+export const POST = manejarRetorno;
