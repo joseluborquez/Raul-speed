@@ -1,22 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { CARRITO_STORAGE_KEY, type ItemCotizacion } from "@/lib/carrito";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
 import styles from "./page.module.css";
-
-interface ItemCotizacion {
-  id: string;
-  partNumber: string;
-  maker?: string;
-  nombre?: string;
-  precioRepuestoClp: number;
-}
 
 function fmt(n: number): string {
   return new Intl.NumberFormat("es-CL").format(n);
 }
 
 export default function Home() {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
@@ -87,6 +82,11 @@ export default function Home() {
 
   function quitarItem(id: string) {
     setItems((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function procederAlPago() {
+    sessionStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify({ items, costoLogisticaClp }));
+    router.push("/checkout");
   }
 
   const subtotalRepuestos = items.reduce((sum, item) => sum + item.precioRepuestoClp, 0);
@@ -212,6 +212,11 @@ export default function Home() {
                 <span>Total</span>
                 <span>${fmt(totalCotizacion)} CLP · IVA incluido</span>
               </div>
+            </div>
+            <div className={styles.addRow}>
+              <button className={styles.addBtn} onClick={procederAlPago}>
+                Proceder al pago →
+              </button>
             </div>
           </div>
         )}
