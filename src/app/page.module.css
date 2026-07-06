@@ -1,0 +1,358 @@
+/* Topbar */
+.topbar {
+  width: 100%;
+  background: var(--negro);
+  border-bottom: 1px solid var(--borde);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbarBrand {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.topbarBrand span {
+  color: var(--rojo);
+}
+.topbarDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--borde);
+}
+.topbarSub {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+
+/* Main */
+.main {
+  width: 100%;
+  max-width: 560px;
+  padding: 56px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Heading */
+.heading {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.headingTag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--rojo);
+  border: 1px solid var(--rojo);
+  padding: 4px 12px;
+  margin-bottom: 16px;
+}
+.heading h1 {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.heading h1 em {
+  font-style: normal;
+  color: var(--rojo);
+}
+.heading p {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+
+/* Search card */
+.searchCard {
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+  padding: 28px;
+}
+.inputRow {
+  display: flex;
+}
+
+.partInput {
+  flex: 1;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  border-right: none;
+  padding: 14px 18px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--blanco);
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.partInput::placeholder {
+  color: var(--texto-muted);
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+.partInput:focus {
+  border-color: var(--rojo);
+}
+
+.searchBtn {
+  background: var(--rojo);
+  color: var(--blanco);
+  border: 1px solid var(--rojo);
+  padding: 14px 28px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.searchBtn:hover {
+  background: var(--rojo-dark);
+  border-color: var(--rojo-dark);
+}
+.searchBtn:active {
+  transform: scale(0.98);
+}
+.searchBtn:disabled {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  cursor: not-allowed;
+  color: var(--texto-muted);
+}
+
+.hint {
+  margin-top: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.hint span {
+  color: var(--texto-claro);
+}
+
+/* Loader */
+.loader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 36px;
+  color: var(--texto-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.loader.visible {
+  display: flex;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--borde);
+  border-top-color: var(--rojo);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Result card */
+.resultCard {
+  display: none;
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+  margin-top: 16px;
+  animation: fadeIn 0.25s ease;
+}
+.resultCard.visible {
+  display: block;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Price hero */
+.priceHero {
+  padding: 40px 28px;
+  text-align: center;
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--borde);
+}
+.priceLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-bottom: 12px;
+}
+.priceAmount {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: var(--rojo);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.priceCurrency {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--texto-muted);
+  margin-left: 6px;
+  letter-spacing: 1px;
+}
+
+/* Info rows */
+.infoRows {
+  padding: 0 28px;
+}
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+.infoRow:last-child {
+  border-bottom: none;
+}
+.infoRow .key {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.infoRow .value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--texto-claro);
+}
+
+/* Error */
+.errorBox {
+  display: none;
+  background: rgba(127, 29, 29, 0.15);
+  border: 1px solid #7f1d1d;
+  width: 100%;
+  padding: 20px 28px;
+  margin-top: 16px;
+  animation: fadeIn 0.25s ease;
+}
+.errorBox.visible {
+  display: block;
+}
+.errorBox strong {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fca5a5;
+  margin-bottom: 6px;
+}
+.errorBox span {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f87171;
+}
+
+/* Responsive móvil */
+@media (max-width: 520px) {
+  .topbar {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .topbarBrand {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+  .topbarSub {
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+  }
+  .topbarDivider {
+    display: none;
+  }
+
+  .main {
+    padding: 32px 12px 60px;
+  }
+  .heading h1 {
+    font-size: 1.4rem;
+  }
+  .heading p {
+    font-size: 0.7rem;
+  }
+
+  .searchCard {
+    padding: 20px 16px;
+  }
+  .partInput {
+    font-size: 0.9rem;
+    padding: 13px 14px;
+  }
+  .searchBtn {
+    padding: 13px 18px;
+    font-size: 0.7rem;
+  }
+  .hint {
+    font-size: 0.65rem;
+  }
+
+  .priceAmount {
+    font-size: 2.6rem;
+  }
+  .infoRows {
+    padding: 0 16px;
+  }
+}
+
+/* Footer */
+.footer {
+  width: 100%;
+  border-top: 1px solid var(--borde);
+  padding: 20px 32px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-top: auto;
+}
+.footer span {
+  color: var(--rojo);
+}

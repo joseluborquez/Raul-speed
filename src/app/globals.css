@@ -1,0 +1,35 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --negro: #000000;
+  --negro-card: #111111;
+  --negro-input: #1a1a1a;
+  --borde: #2a2a2a;
+  --rojo: #cc0000;
+  --rojo-dark: #aa0000;
+  --blanco: #ffffff;
+  --texto-claro: #cccccc;
+  --texto-muted: #666666;
+  --verde: #166534;
+  --verde-texto: #86efac;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-montserrat), "Segoe UI", sans-serif;
+  background: var(--negro);
+  color: var(--blanco);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}

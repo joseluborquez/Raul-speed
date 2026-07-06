@@ -1,0 +1,561 @@
+/* Topbar */
+.topbar {
+  width: 100%;
+  background: var(--negro);
+  border-bottom: 1px solid var(--borde);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbarBrand {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.topbarBrand span {
+  color: var(--rojo);
+}
+.topbarDivider {
+  width: 1px;
+  height: 28px;
+  background: var(--borde);
+}
+.topbarSub {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.topbarBadge {
+  margin-left: auto;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--rojo);
+  border: 1px solid var(--rojo);
+  padding: 4px 12px;
+}
+
+/* Main */
+.main {
+  width: 100%;
+  max-width: 640px;
+  padding: 40px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Section label */
+.sectionLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-bottom: 8px;
+}
+.sectionLabelSpaced {
+  margin-top: 8px;
+}
+
+/* Panel genérico */
+.panel {
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+}
+.panelHeader {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Tipo de cambio panel */
+.tcBody {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tcAutoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tcAutoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tcAutoLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.tcAutoValue {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--blanco);
+  letter-spacing: 1px;
+}
+.tcAutoFuente {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--texto-muted);
+}
+.btnRefreshTasa {
+  background: transparent;
+  border: 1px solid var(--borde);
+  color: var(--texto-muted);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.btnRefreshTasa:hover {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+
+.tcSeparator {
+  border: none;
+  border-top: 1px solid var(--borde);
+}
+
+.tcManualRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tcManualRow label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  white-space: nowrap;
+}
+.tcManualInput {
+  flex: 1;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+  max-width: 160px;
+}
+.tcManualInput:focus {
+  border-color: var(--rojo);
+}
+.tcManualInput::placeholder {
+  color: var(--texto-muted);
+  font-weight: 500;
+}
+
+.tcUnit {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--texto-muted);
+}
+.btnLimpiarManual {
+  background: transparent;
+  border: none;
+  color: var(--texto-muted);
+  font-family: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.btnLimpiarManual:hover {
+  color: var(--rojo);
+}
+
+.tcModeIndicator {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid;
+}
+.tcModeIndicator.auto {
+  color: var(--verde-texto);
+  border-color: var(--verde);
+  background: rgba(22, 101, 52, 0.2);
+}
+.tcModeIndicator.manual {
+  color: #fbbf24;
+  border-color: #92400e;
+  background: rgba(120, 53, 15, 0.2);
+}
+
+/* Search */
+.inputRow {
+  display: flex;
+}
+.partInput {
+  flex: 1;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  border-right: none;
+  padding: 14px 18px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--blanco);
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.partInput::placeholder {
+  color: var(--texto-muted);
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+.partInput:focus {
+  border-color: var(--rojo);
+}
+
+.searchBtn {
+  background: var(--rojo);
+  color: var(--blanco);
+  border: 1px solid var(--rojo);
+  padding: 14px 28px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.searchBtn:hover {
+  background: var(--rojo-dark);
+}
+.searchBtn:active {
+  transform: scale(0.98);
+}
+.searchBtn:disabled {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  cursor: not-allowed;
+  color: var(--texto-muted);
+}
+
+.hint {
+  padding: 12px 24px 16px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.hint span {
+  color: var(--texto-claro);
+}
+
+/* Loader */
+.loader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  color: var(--texto-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.loader.visible {
+  display: flex;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--borde);
+  border-top-color: var(--rojo);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Result */
+.resultCard {
+  display: none;
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+  animation: fadeIn 0.25s ease;
+}
+.resultCard.visible {
+  display: block;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.resultTop {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.resultTop h2 {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.resultTop p {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-top: 4px;
+}
+.badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.badge.ok {
+  color: var(--verde-texto);
+  border-color: var(--verde);
+  background: rgba(22, 101, 52, 0.2);
+}
+.badge.error {
+  color: #fca5a5;
+  border-color: #7f1d1d;
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.priceHero {
+  padding: 32px 24px;
+  text-align: center;
+  background: #0d0d0d;
+  border-bottom: 1px solid var(--borde);
+}
+.priceLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-bottom: 10px;
+}
+.priceAmount {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--rojo);
+  letter-spacing: -1px;
+}
+.priceCurrency {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--texto-muted);
+  margin-left: 6px;
+}
+
+.details {
+  padding: 0 24px;
+}
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #1a1a1a;
+  gap: 12px;
+}
+.detailRow:last-child {
+  border-bottom: none;
+}
+.detailRow .key {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.detailRow .value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--texto-claro);
+  text-align: right;
+}
+.detailRow .value.highlight {
+  color: var(--rojo);
+}
+
+/* Error */
+.errorBox {
+  display: none;
+  background: rgba(127, 29, 29, 0.15);
+  border: 1px solid #7f1d1d;
+  width: 100%;
+  padding: 20px 24px;
+  animation: fadeIn 0.25s ease;
+}
+.errorBox.visible {
+  display: block;
+}
+.errorBox strong {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fca5a5;
+  margin-bottom: 6px;
+}
+.errorBox span {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f87171;
+}
+
+/* Responsive móvil */
+@media (max-width: 520px) {
+  .topbar {
+    padding: 14px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .topbarBrand {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+  .topbarSub {
+    font-size: 0.58rem;
+  }
+  .topbarBadge {
+    font-size: 0.55rem;
+    padding: 3px 8px;
+    letter-spacing: 1px;
+    margin-left: 0;
+  }
+  .topbarDivider {
+    display: none;
+  }
+
+  .tcManualRow {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .tcManualRow label {
+    width: 100%;
+  }
+  .tcManualInput {
+    max-width: none;
+    flex: 1;
+  }
+  .tcUnit {
+    white-space: nowrap;
+  }
+  .btnLimpiarManual {
+    margin-left: auto;
+  }
+
+  .hint {
+    font-size: 0.65rem;
+  }
+
+  .main {
+    padding: 24px 12px 60px;
+    gap: 12px;
+  }
+  .panelHeader {
+    padding: 14px 16px;
+  }
+  .tcBody {
+    padding: 16px;
+  }
+  .details {
+    padding: 0 16px;
+  }
+  .resultTop {
+    padding: 16px;
+  }
+  .priceHero {
+    padding: 24px 16px;
+  }
+  .priceAmount {
+    font-size: 2.2rem;
+  }
+}
+
+/* Footer */
+.footer {
+  width: 100%;
+  border-top: 1px solid var(--borde);
+  padding: 20px 32px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+  margin-top: auto;
+}
+.footer span {
+  color: var(--rojo);
+}
+.footer a {
+  color: var(--texto-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.footer a:hover {
+  color: var(--rojo);
+}
