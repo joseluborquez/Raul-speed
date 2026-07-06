@@ -142,6 +142,23 @@ export default function CheckoutPage() {
       }
 
       sessionStorage.removeItem(CARRITO_STORAGE_KEY);
+
+      if (metodo === "webpay") {
+        // Webpay no es un redirect simple: hay que hacer un POST autosubmit
+        // del token hacia la url que entrega Transbank.
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = dataPago.url;
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "token_ws";
+        input.value = dataPago.token;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+        return;
+      }
+
       window.location.href = dataPago.redirectUrl;
     } catch {
       setError("Error de conexión. Intenta nuevamente.");
@@ -379,8 +396,12 @@ export default function CheckoutPage() {
                 >
                   Mercado Pago
                 </button>
-                <button className={styles.paymentBtn} disabled>
-                  Webpay <span className={styles.paymentBtnSoon}>Próximamente</span>
+                <button
+                  className={styles.paymentBtn}
+                  disabled={procesando}
+                  onClick={() => pagarCon("webpay")}
+                >
+                  Webpay
                 </button>
                 <button className={styles.paymentBtn} disabled>
                   Flow <span className={styles.paymentBtnSoon}>Próximamente</span>
