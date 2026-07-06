@@ -14,5 +14,5 @@ export const FORMULA = {
 export const BCENTRAL = {
   user: process.env.BCENTRAL_USER ?? "",
   pass: process.env.BCENTRAL_PASS ?? "",
-  seriesJpy: process.env.BCENTRAL_SERIES_JPY ?? "F073.TCO.JPY.N.O.D",
+  seriesJpy: process.env.BCENTRAL_SERIES_JPY ?? "F072.CLP.JPY.N.O.D",
 };

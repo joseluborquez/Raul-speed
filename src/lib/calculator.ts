@@ -17,8 +17,7 @@ function toFechaStr(fecha: Date): string {
 
 /**
  * Consulta el Banco Central de Chile para obtener JPY → CLP.
- * El Banco Central publica el tipo de cambio en CLP por 100 JPY,
- * por eso se divide el resultado entre 100.
+ * La serie F072.CLP.JPY.N.O.D publica directamente CLP por 1 JPY.
  */
 async function fetchRateBCentral(fecha: Date): Promise<number | null> {
   const fechaStr = toFechaStr(fecha);
@@ -39,13 +38,15 @@ async function fetchRateBCentral(fecha: Date): Promise<number | null> {
     if (!resp.ok) return null;
     const data = await resp.json();
 
-    // Estructura: {"Series": {"Obs": [{"StatusCode": "OK", "value": "8.22"}]}}
+    // Estructura: {"Series": {"Obs": [{"statusCode": "OK", "value": "5.71"}]}}
+    // La doc oficial usa "statusCode" en minúscula; se acepta también "StatusCode".
+    // statusCode "ND" indica día sin dato disponible (feriado/fin de semana).
     const obsList = data?.Series?.Obs ?? [];
     for (const obs of obsList) {
-      if (obs.StatusCode === "OK") {
+      const statusCode = obs.statusCode ?? obs.StatusCode;
+      if (statusCode === "OK") {
         const rawValue = parseFloat(String(obs.value).replace(",", "."));
-        // El Banco Central publica JPY/CLP como CLP por 100 JPY
-        return rawValue / 100.0;
+        if (!Number.isNaN(rawValue)) return rawValue;
       }
     }
     return null;
