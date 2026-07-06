@@ -16,18 +16,36 @@ function toFechaStr(fecha: Date): string {
 }
 
 /**
+ * Convierte "DD-MM-YYYY" (formato de indexDateString del Banco Central) a "YYYY-MM-DD".
+ */
+function indexDateToIso(indexDateString: string): string {
+  const [dd, mm, yyyy] = indexDateString.split("-");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
  * Consulta el Banco Central de Chile para obtener JPY → CLP.
  * La serie F072.CLP.JPY.N.O.D publica directamente CLP por 1 JPY.
+ *
+ * El Banco Central no publica valores los fines de semana ni feriados
+ * (esos días vienen con statusCode "ND" y value "NaN"), por lo que se
+ * consulta un rango de varios días y se toma la observación más
+ * reciente con statusCode "OK".
  */
-async function fetchRateBCentral(fecha: Date): Promise<number | null> {
-  const fechaStr = toFechaStr(fecha);
+async function fetchRateBCentral(
+  hoy: Date,
+  diasAtras: number,
+): Promise<{ tasa: number; fecha: string } | null> {
+  const desde = new Date(hoy);
+  desde.setDate(desde.getDate() - diasAtras);
+
   const params = new URLSearchParams({
     user: BCENTRAL.user,
     pass: BCENTRAL.pass,
     function: "GetSeries",
     timeseries: BCENTRAL.seriesJpy,
-    firstdate: fechaStr,
-    lastdate: fechaStr,
+    firstdate: toFechaStr(desde),
+    lastdate: toFechaStr(hoy),
   });
 
   try {
@@ -38,16 +56,24 @@ async function fetchRateBCentral(fecha: Date): Promise<number | null> {
     if (!resp.ok) return null;
     const data = await resp.json();
 
-    // Estructura: {"Series": {"Obs": [{"statusCode": "OK", "value": "5.71"}]}}
+    // Estructura: {"Series": {"Obs": [{"indexDateString": "06-07-2026", "statusCode": "OK", "value": "5.71"}]}}
     // La doc oficial usa "statusCode" en minúscula; se acepta también "StatusCode".
     // statusCode "ND" indica día sin dato disponible (feriado/fin de semana).
-    const obsList = data?.Series?.Obs ?? [];
-    for (const obs of obsList) {
+    const obsList: unknown[] = data?.Series?.Obs ?? [];
+
+    // Recorrer desde el final (fecha más reciente) hacia atrás y quedarse
+    // con la primera observación válida.
+    for (let i = obsList.length - 1; i >= 0; i--) {
+      const obs = obsList[i] as Record<string, unknown>;
       const statusCode = obs.statusCode ?? obs.StatusCode;
-      if (statusCode === "OK") {
-        const rawValue = parseFloat(String(obs.value).replace(",", "."));
-        if (!Number.isNaN(rawValue)) return rawValue;
-      }
+      if (statusCode !== "OK") continue;
+
+      const rawValue = parseFloat(String(obs.value).replace(",", "."));
+      if (Number.isNaN(rawValue)) continue;
+
+      const indexDateString = String(obs.indexDateString ?? "");
+      const fecha = indexDateString ? indexDateToIso(indexDateString) : toFechaStr(hoy);
+      return { tasa: rawValue, fecha };
     }
     return null;
   } catch {
@@ -79,18 +105,16 @@ async function fetchRateFallback(): Promise<number | null> {
 /**
  * Retorna la tasa JPY → CLP y su fuente.
  * Intenta primero el Banco Central; si falla, usa exchangerate-api.
- * Busca hasta 5 días hábiles anteriores si el día actual no tiene datos.
+ * El Banco Central no publica los fines de semana ni feriados, por lo
+ * que se consultan los últimos 5 días y se toma el más reciente con
+ * statusCode "OK".
  */
 export async function getJpyToClp(): Promise<TipoCambio> {
   const today = new Date();
 
-  for (let delta = 0; delta < 5; delta++) {
-    const fecha = new Date(today);
-    fecha.setDate(fecha.getDate() - delta);
-    const rate = await fetchRateBCentral(fecha);
-    if (rate !== null) {
-      return { tasa: rate, fuente: `Banco Central Chile (${toFechaStr(fecha)})` };
-    }
+  const resultado = await fetchRateBCentral(today, 4);
+  if (resultado !== null) {
+    return { tasa: resultado.tasa, fuente: `Banco Central Chile (${resultado.fecha})` };
   }
 
   const rate = await fetchRateFallback();
