@@ -24,9 +24,10 @@ export default function Home() {
   const [mostrarSolicitud, setMostrarSolicitud] = useState(false);
   const [solForm, setSolForm] = useState({
     nombreApellido: "",
-    numeroParteCantidad: "",
     contacto: "",
     moto: "",
+    chasisVinPatente: "",
+    descripcionRepuesto: "",
   });
   const [solEnviando, setSolEnviando] = useState(false);
   const [solEnviada, setSolEnviada] = useState(false);
@@ -122,8 +123,10 @@ export default function Home() {
   async function enviarSolicitud() {
     if (
       !solForm.nombreApellido.trim() ||
-      !solForm.numeroParteCantidad.trim() ||
-      !solForm.contacto.trim()
+      !solForm.contacto.trim() ||
+      !solForm.moto.trim() ||
+      !solForm.chasisVinPatente.trim() ||
+      !solForm.descripcionRepuesto.trim()
     ) {
       setSolError("Completa los campos obligatorios");
       return;
@@ -144,7 +147,13 @@ export default function Home() {
         return;
       }
       setSolEnviada(true);
-      setSolForm({ nombreApellido: "", numeroParteCantidad: "", contacto: "", moto: "" });
+      setSolForm({
+        nombreApellido: "",
+        contacto: "",
+        moto: "",
+        chasisVinPatente: "",
+        descripcionRepuesto: "",
+      });
     } catch {
       setSolError("Error de conexión");
     }
@@ -228,7 +237,7 @@ export default function Home() {
             </button>{" "}
             y lo buscamos por ti.
           </p>
-          <p className={styles.helpBoxSub}>Te respondemos por WhatsApp el mismo día hábil.</p>
+          <p className={styles.helpBoxSub}>Te respondemos por WhatsApp</p>
         </div>
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
@@ -414,7 +423,7 @@ export default function Home() {
               ✕
             </button>
             <h2 className={styles.modalTitle}>Déjanos los datos de tu moto</h2>
-            <p className={styles.modalSub}>Te contactamos por WhatsApp el mismo día hábil.</p>
+            <p className={styles.modalSub}>Te contactamos por WhatsApp.</p>
 
             {solEnviada ? (
               <p className={styles.modalSuccess}>
@@ -423,7 +432,7 @@ export default function Home() {
             ) : (
               <div className={styles.modalForm}>
                 <div className={styles.modalField}>
-                  <label htmlFor="solNombre">Nombre y apellido *</label>
+                  <label htmlFor="solNombre">Nombre completo *</label>
                   <input
                     id="solNombre"
                     value={solForm.nombreApellido}
@@ -431,17 +440,9 @@ export default function Home() {
                   />
                 </div>
                 <div className={styles.modalField}>
-                  <label htmlFor="solParte">
-                    N° de parte original y cantidad exacta de cada uno *
+                  <label htmlFor="solContacto">
+                    Número de WhatsApp (con código de área) o correo electrónico *
                   </label>
-                  <input
-                    id="solParte"
-                    value={solForm.numeroParteCantidad}
-                    onChange={(e) => actualizarSolCampo("numeroParteCantidad", e.target.value)}
-                  />
-                </div>
-                <div className={styles.modalField}>
-                  <label htmlFor="solContacto">WhatsApp o correo electrónico *</label>
                   <input
                     id="solContacto"
                     value={solForm.contacto}
@@ -449,11 +450,28 @@ export default function Home() {
                   />
                 </div>
                 <div className={styles.modalField}>
-                  <label htmlFor="solMoto">Marca, modelo y año de tu moto</label>
+                  <label htmlFor="solMoto">Marca, Modelo y Año de la motocicleta *</label>
                   <input
                     id="solMoto"
                     value={solForm.moto}
                     onChange={(e) => actualizarSolCampo("moto", e.target.value)}
+                  />
+                </div>
+                <div className={styles.modalField}>
+                  <label htmlFor="solChasis">Número de Chasis / VIN / Patente *</label>
+                  <input
+                    id="solChasis"
+                    value={solForm.chasisVinPatente}
+                    onChange={(e) => actualizarSolCampo("chasisVinPatente", e.target.value)}
+                  />
+                </div>
+                <div className={styles.modalField}>
+                  <label htmlFor="solDescripcion">Descripción detallada del repuesto *</label>
+                  <textarea
+                    id="solDescripcion"
+                    rows={3}
+                    value={solForm.descripcionRepuesto}
+                    onChange={(e) => actualizarSolCampo("descripcionRepuesto", e.target.value)}
                   />
                 </div>
 

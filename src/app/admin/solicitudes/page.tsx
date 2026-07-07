@@ -10,9 +10,10 @@ interface SolicitudRow {
   id: string;
   created_at: string;
   nombre_apellido: string;
-  numero_parte_cantidad: string;
+  descripcion_repuesto: string;
   contacto: string;
-  moto: string | null;
+  moto: string;
+  chasis_vin_patente: string;
 }
 
 function fmtFecha(iso: string): string {
@@ -105,16 +106,20 @@ export default function AdminSolicitudesPage() {
                 <div className={styles.pedidoDetalle}>
                   <div className={styles.details}>
                     <div className={styles.detailRow}>
-                      <span className={styles.key}>N° de parte / cantidad</span>
-                      <span className={styles.value}>{s.numero_parte_cantidad}</span>
-                    </div>
-                    <div className={styles.detailRow}>
                       <span className={styles.key}>Contacto</span>
                       <span className={styles.value}>{s.contacto}</span>
                     </div>
                     <div className={styles.detailRow}>
                       <span className={styles.key}>Moto</span>
-                      <span className={styles.value}>{s.moto || "—"}</span>
+                      <span className={styles.value}>{s.moto}</span>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span className={styles.key}>Chasis / VIN / Patente</span>
+                      <span className={styles.value}>{s.chasis_vin_patente}</span>
+                    </div>
+                    <div className={styles.detailRow}>
+                      <span className={styles.key}>Descripción del repuesto</span>
+                      <span className={styles.value}>{s.descripcion_repuesto}</span>
                     </div>
                   </div>
                 </div>

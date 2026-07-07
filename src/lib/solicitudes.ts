@@ -2,9 +2,10 @@ import { createAdminClient } from "./supabase/admin";
 
 export interface CrearSolicitudInput {
   nombreApellido: string;
-  numeroParteCantidad: string;
   contacto: string;
-  moto?: string;
+  moto: string;
+  chasisVinPatente: string;
+  descripcionRepuesto: string;
 }
 
 /**
@@ -20,9 +21,10 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<string
     .from("solicitudes_parte")
     .insert({
       nombre_apellido: input.nombreApellido,
-      numero_parte_cantidad: input.numeroParteCantidad,
+      descripcion_repuesto: input.descripcionRepuesto,
       contacto: input.contacto,
-      moto: input.moto ?? null,
+      moto: input.moto,
+      chasis_vin_patente: input.chasisVinPatente,
     })
     .select("id")
     .single();

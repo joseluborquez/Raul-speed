@@ -212,7 +212,8 @@
   text-transform: uppercase;
   color: var(--texto-muted);
 }
-.modalField input {
+.modalField input,
+.modalField textarea {
   width: 100%;
   background: var(--negro-input);
   border: 1px solid var(--borde);
@@ -224,7 +225,11 @@
   outline: none;
   transition: border-color 0.2s;
 }
-.modalField input:focus {
+.modalField textarea {
+  resize: vertical;
+}
+.modalField input:focus,
+.modalField textarea:focus {
   border-color: var(--rojo);
 }
 .modalError {

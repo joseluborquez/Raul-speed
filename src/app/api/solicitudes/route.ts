@@ -5,18 +5,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
 
   const nombreApellido = String(body?.nombreApellido ?? "").trim();
-  const numeroParteCantidad = String(body?.numeroParteCantidad ?? "").trim();
   const contacto = String(body?.contacto ?? "").trim();
   const moto = String(body?.moto ?? "").trim();
+  const chasisVinPatente = String(body?.chasisVinPatente ?? "").trim();
+  const descripcionRepuesto = String(body?.descripcionRepuesto ?? "").trim();
 
   if (!nombreApellido) {
-    return NextResponse.json({ error: "Falta el nombre y apellido" }, { status: 400 });
-  }
-  if (!numeroParteCantidad) {
-    return NextResponse.json(
-      { error: "Falta el número de parte y la cantidad" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Falta el nombre completo" }, { status: 400 });
   }
   if (!contacto) {
     return NextResponse.json(
@@ -24,13 +19,32 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (!moto) {
+    return NextResponse.json(
+      { error: "Falta la marca, modelo y año de la motocicleta" },
+      { status: 400 },
+    );
+  }
+  if (!chasisVinPatente) {
+    return NextResponse.json(
+      { error: "Falta el número de chasis, VIN o patente" },
+      { status: 400 },
+    );
+  }
+  if (!descripcionRepuesto) {
+    return NextResponse.json(
+      { error: "Falta la descripción del repuesto" },
+      { status: 400 },
+    );
+  }
 
   try {
     const id = await crearSolicitud({
       nombreApellido,
-      numeroParteCantidad,
       contacto,
-      moto: moto || undefined,
+      moto,
+      chasisVinPatente,
+      descripcionRepuesto,
     });
     return NextResponse.json({ id });
   } catch (exc) {
