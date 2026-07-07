@@ -129,6 +129,7 @@
 }
 .fieldRow .field {
   flex: 1;
+  min-width: 0;
 }
 .field label {
   font-size: 0.62rem;
@@ -140,6 +141,7 @@
 .field input,
 .field select,
 .field textarea {
+  width: 100%;
   background: var(--negro-input);
   border: 1px solid var(--borde);
   padding: 12px 14px;
