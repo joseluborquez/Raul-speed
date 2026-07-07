@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
+import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 import { crearSolicitud } from "@/lib/solicitudes";
 
 export async function POST(request: Request) {
+  const ip = obtenerIp(request);
+  if (rateLimitExcedido(`solicitudes:${ip}`, 5, 10 * 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiadas solicitudes seguidas. Intenta de nuevo más tarde." },
+      { status: 429 },
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   const nombreApellido = String(body?.nombreApellido ?? "").trim();
@@ -48,9 +57,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ id });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo enviar la solicitud" },
-      { status: 500 },
-    );
+    console.error("Error creando solicitud:", exc);
+    return NextResponse.json({ error: "No se pudo enviar la solicitud" }, { status: 500 });
   }
 }

@@ -30,9 +30,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ redirectUrl });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo iniciar el pago" },
-      { status: 500 },
-    );
+    console.error("Error creando pago Flow:", exc);
+    return NextResponse.json({ error: "No se pudo iniciar el pago" }, { status: 500 });
   }
 }

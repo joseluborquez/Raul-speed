@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { esEmailAdmin } from "@/lib/adminAuth";
 import { listarPedidos } from "@/lib/pedidos";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +9,7 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!esEmailAdmin(user?.email)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -16,9 +17,7 @@ export async function GET() {
     const pedidos = await listarPedidos();
     return NextResponse.json({ pedidos });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo obtener los pedidos" },
-      { status: 500 },
-    );
+    console.error("Error listando pedidos:", exc);
+    return NextResponse.json({ error: "No se pudo obtener los pedidos" }, { status: 500 });
   }
 }

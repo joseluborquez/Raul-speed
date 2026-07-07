@@ -14,9 +14,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
     return NextResponse.json({ estado });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo consultar el pedido" },
-      { status: 500 },
-    );
+    console.error("Error consultando estado de pedido:", exc);
+    return NextResponse.json({ error: "No se pudo consultar el pedido" }, { status: 500 });
   }
 }

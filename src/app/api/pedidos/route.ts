@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { cotizar } from "@/lib/cotizar";
 import { crearPedido, type ItemPedido, type MetodoEnvio } from "@/lib/pedidos";
 import { getSettings } from "@/lib/settings";
 import { limpiarRut, validarRut } from "@/lib/rut";
+
+const MAX_ITEMS_POR_PEDIDO = 30;
 
 const METODOS_ENVIO: MetodoEnvio[] = [
   "starken_domicilio",
@@ -34,13 +37,45 @@ export async function POST(request: Request) {
   if (itemsRaw.length === 0) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
   }
+  if (itemsRaw.length > MAX_ITEMS_POR_PEDIDO) {
+    return NextResponse.json({ error: "Demasiados ítems en el carrito" }, { status: 400 });
+  }
 
-  // La cantidad viene del navegador: se sanea a un entero >= 1 antes de
-  // usarla para calcular el subtotal, nunca se confía en su valor crudo.
-  const items: ItemPedido[] = itemsRaw.map((item) => ({
-    ...item,
-    cantidad: Math.max(1, Math.trunc(Number(item.cantidad)) || 1),
-  }));
+  // El precio nunca se toma del navegador: cada partNumber se vuelve a
+  // cotizar contra Impex acá mismo. De lo contrario, cualquiera podría
+  // editar el precioRepuestoClp que manda el cliente y pagar menos de lo
+  // real — el navegador solo puede decidir *qué* partNumber y *cuántas*
+  // unidades, nunca el precio.
+  const preciosCache = new Map<string, Awaited<ReturnType<typeof cotizar>>>();
+  const items: ItemPedido[] = [];
+
+  for (const raw of itemsRaw) {
+    const partNumber = String(raw?.partNumber ?? "").trim().toUpperCase();
+    if (!partNumber) {
+      return NextResponse.json({ error: "Hay un ítem sin número de parte" }, { status: 400 });
+    }
+    const cantidad = Math.max(1, Math.trunc(Number(raw?.cantidad)) || 1);
+
+    let resultado = preciosCache.get(partNumber);
+    if (!resultado) {
+      resultado = await cotizar(partNumber);
+      preciosCache.set(partNumber, resultado);
+    }
+    if (resultado.estado !== "ok") {
+      return NextResponse.json(
+        { error: `No se pudo verificar el precio de ${partNumber}. Intenta cotizar de nuevo.` },
+        { status: 409 },
+      );
+    }
+
+    items.push({
+      partNumber,
+      maker: resultado.maker,
+      nombre: resultado.nombre,
+      precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+      cantidad,
+    });
+  }
 
   for (const campo of CAMPOS_TEXTO_REQUERIDOS) {
     if (!String(body?.[campo] ?? "").trim()) {
@@ -90,9 +125,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ pedidoId, totalClp });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo crear el pedido" },
-      { status: 500 },
-    );
+    console.error("Error creando pedido:", exc);
+    return NextResponse.json({ error: "No se pudo crear el pedido" }, { status: 500 });
   }
 }

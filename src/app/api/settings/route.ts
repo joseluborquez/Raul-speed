@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { esEmailAdmin } from "@/lib/adminAuth";
 import { getSettings, updateCostoLogisticaClp, updateTipoCambioManual } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,7 +14,7 @@ export async function PUT(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!esEmailAdmin(user?.email)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

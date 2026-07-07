@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { commitPago } from "@/lib/pagos/webpay";
-import { getPedidoEstado, marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
+import { getPedido, getPedidoEstado, marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
 
 /**
  * Transbank redirige al navegador a esta URL después del pago (o del
@@ -42,11 +42,27 @@ async function manejarRetorno(request: Request): Promise<Response> {
     const aprobado = resultado?.status === "AUTHORIZED" && resultado?.response_code === 0;
 
     if (aprobado) {
-      await marcarPedidoPagado(pedidoId, resultado);
+      // El monto autorizado por Transbank debe coincidir con el total del
+      // pedido — si no, alguien manipuló el pedido antes de llegar acá
+      // (o hay una inconsistencia) y no se marca como pagado.
+      const pedido = await getPedido(pedidoId);
+      const montoOk = !!pedido && Number(resultado.amount) === Number(pedido.total_clp);
+
+      if (montoOk) {
+        await marcarPedidoPagado(pedidoId, resultado);
+      } else {
+        console.error("Webpay: monto autorizado no coincide con el pedido", {
+          pedidoId,
+          montoAutorizado: resultado.amount,
+          totalPedido: pedido?.total_clp,
+        });
+        await marcarPedidoFallido(pedidoId, { ...resultado, motivoInterno: "monto_no_coincide" });
+      }
     } else {
       await marcarPedidoFallido(pedidoId, resultado);
     }
   } catch (exc) {
+    console.error("Error confirmando pago Webpay:", exc);
     await marcarPedidoFallido(pedidoId, {
       error: exc instanceof Error ? exc.message : String(exc),
     });

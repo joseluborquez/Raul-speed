@@ -27,9 +27,7 @@ export async function POST(request: Request) {
     // autosubmit de `token` hacia `url`.
     return NextResponse.json({ url, token });
   } catch (exc) {
-    return NextResponse.json(
-      { error: exc instanceof Error ? exc.message : "No se pudo iniciar el pago" },
-      { status: 500 },
-    );
+    console.error("Error creando pago Webpay:", exc);
+    return NextResponse.json({ error: "No se pudo iniciar el pago" }, { status: 500 });
   }
 }

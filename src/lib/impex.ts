@@ -30,7 +30,7 @@ function normalizar(partNumber: string): string[] {
   const pn = partNumber.trim().toUpperCase();
   const variantes = [pn];
   if (pn.includes("-")) {
-    variantes.push(pn.replace("-", ""));
+    variantes.push(pn.replaceAll("-", ""));
   } else {
     const m = pn.match(/^(\d{5})([A-Z0-9]+)$/);
     if (m) variantes.push(`${m[1]}-${m[2]}`);
