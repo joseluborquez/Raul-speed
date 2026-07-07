@@ -183,7 +183,7 @@ export default function CheckoutPage() {
   }
 
   const subtotalRepuestos = carrito.items.reduce(
-    (sum, item) => sum + item.precioRepuestoClp,
+    (sum, item) => sum + item.precioRepuestoClp * item.cantidad,
     0,
   );
   const total = subtotalRepuestos + carrito.costoLogisticaClp;
@@ -204,12 +204,16 @@ export default function CheckoutPage() {
           {carrito.items.map((item) => (
             <div className={styles.summaryItem} key={item.id}>
               <div className={styles.summaryItemInfo}>
-                <span className={styles.summaryItemPart}>{item.partNumber}</span>
+                <span className={styles.summaryItemPart}>
+                  {item.partNumber} <span className={styles.summaryItemQty}>×{item.cantidad}</span>
+                </span>
                 <span className={styles.summaryItemName}>
                   {[item.maker, item.nombre].filter(Boolean).join(" · ") || "—"}
                 </span>
               </div>
-              <span className={styles.summaryItemPrice}>${fmt(item.precioRepuestoClp)}</span>
+              <span className={styles.summaryItemPrice}>
+                ${fmt(item.precioRepuestoClp * item.cantidad)}
+              </span>
             </div>
           ))}
           <div className={styles.summaryTotals}>

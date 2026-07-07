@@ -8,6 +8,7 @@ export interface ItemCotizacion {
   maker?: string;
   nombre?: string;
   precioRepuestoClp: number;
+  cantidad: number;
 }
 
 export interface CarritoStorage {

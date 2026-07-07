@@ -77,6 +77,10 @@
   font-weight: 700;
   color: var(--blanco);
 }
+.summaryItemQty {
+  font-weight: 600;
+  color: var(--texto-muted);
+}
 .summaryItemName {
   font-size: 0.65rem;
   color: var(--texto-muted);

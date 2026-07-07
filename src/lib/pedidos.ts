@@ -10,6 +10,7 @@ export interface ItemPedido {
   maker?: string;
   nombre?: string;
   precioRepuestoClp: number;
+  cantidad: number;
 }
 
 export interface CrearPedidoInput {

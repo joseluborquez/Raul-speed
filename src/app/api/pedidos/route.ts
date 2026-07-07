@@ -30,10 +30,17 @@ const CAMPOS_TEXTO_REQUERIDOS = [
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
 
-  const items: ItemPedido[] = Array.isArray(body?.items) ? body.items : [];
-  if (items.length === 0) {
+  const itemsRaw: ItemPedido[] = Array.isArray(body?.items) ? body.items : [];
+  if (itemsRaw.length === 0) {
     return NextResponse.json({ error: "El carrito está vacío" }, { status: 400 });
   }
+
+  // La cantidad viene del navegador: se sanea a un entero >= 1 antes de
+  // usarla para calcular el subtotal, nunca se confía en su valor crudo.
+  const items: ItemPedido[] = itemsRaw.map((item) => ({
+    ...item,
+    cantidad: Math.max(1, Math.trunc(Number(item.cantidad)) || 1),
+  }));
 
   for (const campo of CAMPOS_TEXTO_REQUERIDOS) {
     if (!String(body?.[campo] ?? "").trim()) {
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
   // El subtotal se recalcula desde los ítems y el costo de logística se
   // vuelve a leer de settings — nunca se confía en el total que mande el navegador.
   const subtotalRepuestosClp = items.reduce(
-    (sum, item) => sum + Number(item.precioRepuestoClp || 0),
+    (sum, item) => sum + Number(item.precioRepuestoClp || 0) * item.cantidad,
     0,
   );
   const { costoLogisticaClp } = await getSettings();

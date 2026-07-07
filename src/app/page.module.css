@@ -304,9 +304,50 @@
   color: var(--texto-claro);
 }
 
-/* Agregar a la cotización */
+/* Agregar al carrito de compras */
 .addRow {
   padding: 4px 28px 24px;
+}
+.qtyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+}
+.qtyLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.qtyControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.qtyBtn {
+  width: 30px;
+  height: 30px;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  color: var(--texto-claro);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.qtyBtn:hover {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+.qtyValue {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--blanco);
 }
 .addBtn {
   width: 100%;
@@ -381,6 +422,34 @@
   align-items: center;
   gap: 14px;
   flex-shrink: 0;
+}
+.qtyControlsSmall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qtyBtnSmall {
+  width: 22px;
+  height: 22px;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  color: var(--texto-claro);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.qtyBtnSmall:hover {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+.qtyValueSmall {
+  min-width: 16px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--blanco);
 }
 .cartItemPrice {
   font-size: 0.85rem;

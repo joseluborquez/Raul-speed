@@ -19,6 +19,7 @@ export default function Home() {
 
   const [items, setItems] = useState<ItemCotizacion[]>([]);
   const [costoLogisticaClp, setCostoLogisticaClp] = useState(0);
+  const [cantidad, setCantidad] = useState(1);
 
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
@@ -30,6 +31,7 @@ export default function Home() {
     setLoading(true);
     setResultado(null);
     setError(null);
+    setCantidad(1);
 
     let data: ResultadoCotizacion;
     try {
@@ -59,7 +61,7 @@ export default function Home() {
     }
   }
 
-  function agregarALaCotizacion() {
+  function agregarAlCarrito() {
     if (!resultado || resultado.estado !== "ok") return;
 
     setItems((prev) => [
@@ -70,10 +72,12 @@ export default function Home() {
         maker: resultado.maker,
         nombre: resultado.nombre,
         precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+        cantidad,
       },
     ]);
 
     setResultado(null);
+    setCantidad(1);
     if (inputRef.current) {
       inputRef.current.value = "";
       inputRef.current.focus();
@@ -84,12 +88,23 @@ export default function Home() {
     setItems((prev) => prev.filter((item) => item.id !== id));
   }
 
+  function cambiarCantidadItem(id: string, delta: number) {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, cantidad: Math.max(1, item.cantidad + delta) } : item,
+      ),
+    );
+  }
+
   function procederAlPago() {
     sessionStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify({ items, costoLogisticaClp }));
     router.push("/checkout");
   }
 
-  const subtotalRepuestos = items.reduce((sum, item) => sum + item.precioRepuestoClp, 0);
+  const subtotalRepuestos = items.reduce(
+    (sum, item) => sum + item.precioRepuestoClp * item.cantidad,
+    0,
+  );
   const totalCotizacion = subtotalRepuestos + (items.length > 0 ? costoLogisticaClp : 0);
 
   return (
@@ -167,8 +182,30 @@ export default function Home() {
               </div>
             </div>
             <div className={styles.addRow}>
-              <button className={styles.addBtn} onClick={agregarALaCotizacion}>
-                + Agregar a la cotización
+              <div className={styles.qtyRow}>
+                <span className={styles.qtyLabel}>Cantidad</span>
+                <div className={styles.qtyControls}>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                    aria-label="Disminuir cantidad"
+                  >
+                    −
+                  </button>
+                  <span className={styles.qtyValue}>{cantidad}</span>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setCantidad((c) => c + 1)}
+                    aria-label="Aumentar cantidad"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <button className={styles.addBtn} onClick={agregarAlCarrito}>
+                + Agregar al carrito de compras
               </button>
             </div>
           </div>
@@ -186,8 +223,27 @@ export default function Home() {
                   </span>
                 </div>
                 <div className={styles.cartItemRight}>
+                  <div className={styles.qtyControlsSmall}>
+                    <button
+                      type="button"
+                      className={styles.qtyBtnSmall}
+                      onClick={() => cambiarCantidadItem(item.id, -1)}
+                      aria-label={`Disminuir cantidad de ${item.partNumber}`}
+                    >
+                      −
+                    </button>
+                    <span className={styles.qtyValueSmall}>{item.cantidad}</span>
+                    <button
+                      type="button"
+                      className={styles.qtyBtnSmall}
+                      onClick={() => cambiarCantidadItem(item.id, 1)}
+                      aria-label={`Aumentar cantidad de ${item.partNumber}`}
+                    >
+                      +
+                    </button>
+                  </div>
                   <span className={styles.cartItemPrice}>
-                    ${fmt(item.precioRepuestoClp)}
+                    ${fmt(item.precioRepuestoClp * item.cantidad)}
                   </span>
                   <button
                     className={styles.cartRemoveBtn}

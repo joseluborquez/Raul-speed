@@ -159,10 +159,12 @@ export default function AdminPedidosPage() {
                   <div className={styles.details}>
                     {pedido.items.map((item, i) => (
                       <div className={styles.detailRow} key={i}>
-                        <span className={styles.key}>{item.partNumber}</span>
+                        <span className={styles.key}>
+                          {item.partNumber} ×{item.cantidad ?? 1}
+                        </span>
                         <span className={styles.value}>
                           {[item.maker, item.nombre].filter(Boolean).join(" · ")} — $
-                          {fmt(item.precioRepuestoClp)}
+                          {fmt(item.precioRepuestoClp * (item.cantidad ?? 1))}
                         </span>
                       </div>
                     ))}
