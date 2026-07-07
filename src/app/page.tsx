@@ -32,6 +32,8 @@ export default function Home() {
   const [solEnviada, setSolEnviada] = useState(false);
   const [solError, setSolError] = useState<string | null>(null);
 
+  const [verMasSobrecargo, setVerMasSobrecargo] = useState(false);
+
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
     if (!part) {
@@ -182,9 +184,15 @@ export default function Home() {
         </div>
 
         <div className={styles.trustRow}>
-          <span className={styles.trustItem}>✓ Repuestos 100% originales garantizados</span>
-          <span className={styles.trustItem}>✓ Entrega en 10-20 días hábiles</span>
-          <span className={styles.trustItem}>✓ Envío con seguimiento</span>
+          <span className={styles.trustItem}>
+            <span className={styles.trustCheck}>✓</span> Repuestos 100% originales garantizados
+          </span>
+          <span className={styles.trustItem}>
+            <span className={styles.trustCheck}>✓</span> Entrega en 10-20 días hábiles
+          </span>
+          <span className={styles.trustItem}>
+            <span className={styles.trustCheck}>✓</span> Envío con seguimiento
+          </span>
         </div>
 
         <p className={styles.tagline}>
@@ -358,22 +366,35 @@ export default function Home() {
             El precio cotizado corresponde a repuestos OEM 100% originales de tamaño y peso
             estándar.
           </p>
-          <p className={styles.noticeText}>
-            Repuestos de alto volumen (carenados, estanques, basculantes, llantas, cigüeñales,
-            entre otros) tienen un sobrecargo por envío internacional.
-          </p>
-          <div className={styles.noticeList}>
-            <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
-            <div className={styles.noticeListItem}>
-              📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
-            </div>
-            <div className={styles.noticeListItem}>
-              📞 Atención especializada: WhatsApp{" "}
-              <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
-                +56 9 5415 6358
-              </a>
-            </div>
-          </div>
+
+          {verMasSobrecargo && (
+            <>
+              <p className={styles.noticeText}>
+                Repuestos de alto volumen (carenados, estanques, basculantes, llantas,
+                cigüeñales, entre otros) tienen un sobrecargo por envío internacional.
+              </p>
+              <div className={styles.noticeList}>
+                <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
+                <div className={styles.noticeListItem}>
+                  📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
+                </div>
+                <div className={styles.noticeListItem}>
+                  📞 Atención especializada: WhatsApp{" "}
+                  <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
+                    +56 9 5415 6358
+                  </a>
+                </div>
+              </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            className={styles.noticeToggle}
+            onClick={() => setVerMasSobrecargo((v) => !v)}
+          >
+            {verMasSobrecargo ? "Ver menos ▲" : "Ver más ▼"}
+          </button>
         </div>
       </div>
 
