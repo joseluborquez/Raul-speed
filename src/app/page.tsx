@@ -21,6 +21,17 @@ export default function Home() {
   const [costoLogisticaClp, setCostoLogisticaClp] = useState(0);
   const [cantidad, setCantidad] = useState(1);
 
+  const [mostrarSolicitud, setMostrarSolicitud] = useState(false);
+  const [solForm, setSolForm] = useState({
+    nombreApellido: "",
+    numeroParteCantidad: "",
+    contacto: "",
+    moto: "",
+  });
+  const [solEnviando, setSolEnviando] = useState(false);
+  const [solEnviada, setSolEnviada] = useState(false);
+  const [solError, setSolError] = useState<string | null>(null);
+
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
     if (!part) {
@@ -96,6 +107,48 @@ export default function Home() {
     );
   }
 
+  function actualizarSolCampo(campo: keyof typeof solForm, valor: string) {
+    setSolForm((prev) => ({ ...prev, [campo]: valor }));
+  }
+
+  function abrirSolicitud() {
+    setMostrarSolicitud(true);
+    setSolEnviada(false);
+    setSolError(null);
+  }
+
+  async function enviarSolicitud() {
+    if (
+      !solForm.nombreApellido.trim() ||
+      !solForm.numeroParteCantidad.trim() ||
+      !solForm.contacto.trim()
+    ) {
+      setSolError("Completa los campos obligatorios");
+      return;
+    }
+
+    setSolEnviando(true);
+    setSolError(null);
+    try {
+      const res = await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(solForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSolError(data.error || "No se pudo enviar la solicitud");
+        setSolEnviando(false);
+        return;
+      }
+      setSolEnviada(true);
+      setSolForm({ nombreApellido: "", numeroParteCantidad: "", contacto: "", moto: "" });
+    } catch {
+      setSolError("Error de conexión");
+    }
+    setSolEnviando(false);
+  }
+
   function procederAlPago() {
     sessionStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify({ items, costoLogisticaClp }));
     router.push("/checkout");
@@ -128,6 +181,17 @@ export default function Home() {
           <p>Importación directa · Precio en Peso Chileno</p>
         </div>
 
+        <div className={styles.trustRow}>
+          <span className={styles.trustItem}>✓ Repuestos 100% originales garantizados</span>
+          <span className={styles.trustItem}>✓ Entrega en 10-20 días hábiles</span>
+          <span className={styles.trustItem}>✓ Envío con seguimiento</span>
+        </div>
+
+        <p className={styles.tagline}>
+          Tu repuesto en <span className={styles.taglineHighlight}>semanas</span>, no en meses
+        </p>
+        <div className={styles.taglineDivider} />
+
         <div className={styles.searchCard}>
           <div className={styles.inputRow}>
             <input
@@ -146,6 +210,17 @@ export default function Home() {
           <p className={styles.hint}>
             Ingresa el número de parte OEM · <span>Solo piezas genuinas</span>
           </p>
+        </div>
+
+        <div className={styles.helpBox}>
+          <p className={styles.helpBoxTitle}>¿No sabes tu número de parte?</p>
+          <p className={styles.helpBoxText}>
+            <button type="button" className={styles.helpBoxLink} onClick={abrirSolicitud}>
+              Déjanos los datos de tu moto aquí
+            </button>{" "}
+            y lo buscamos por ti.
+          </p>
+          <p className={styles.helpBoxSub}>Te respondemos por WhatsApp el mismo día hábil.</p>
         </div>
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
@@ -305,6 +380,72 @@ export default function Home() {
       <footer className={styles.footer}>
         <span>Raulspeed</span> · Importación directa de repuestos originales
       </footer>
+
+      {mostrarSolicitud && (
+        <div className={styles.modalOverlay} onClick={() => setMostrarSolicitud(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => setMostrarSolicitud(false)}
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
+            <h2 className={styles.modalTitle}>Déjanos los datos de tu moto</h2>
+            <p className={styles.modalSub}>Te contactamos por WhatsApp el mismo día hábil.</p>
+
+            {solEnviada ? (
+              <p className={styles.modalSuccess}>
+                ✅ ¡Listo! Recibimos tus datos, te contactaremos pronto.
+              </p>
+            ) : (
+              <div className={styles.modalForm}>
+                <div className={styles.modalField}>
+                  <label htmlFor="solNombre">Nombre y apellido *</label>
+                  <input
+                    id="solNombre"
+                    value={solForm.nombreApellido}
+                    onChange={(e) => actualizarSolCampo("nombreApellido", e.target.value)}
+                  />
+                </div>
+                <div className={styles.modalField}>
+                  <label htmlFor="solParte">
+                    N° de parte original y cantidad exacta de cada uno *
+                  </label>
+                  <input
+                    id="solParte"
+                    value={solForm.numeroParteCantidad}
+                    onChange={(e) => actualizarSolCampo("numeroParteCantidad", e.target.value)}
+                  />
+                </div>
+                <div className={styles.modalField}>
+                  <label htmlFor="solContacto">WhatsApp o correo electrónico *</label>
+                  <input
+                    id="solContacto"
+                    value={solForm.contacto}
+                    onChange={(e) => actualizarSolCampo("contacto", e.target.value)}
+                  />
+                </div>
+                <div className={styles.modalField}>
+                  <label htmlFor="solMoto">Marca, modelo y año de tu moto</label>
+                  <input
+                    id="solMoto"
+                    value={solForm.moto}
+                    onChange={(e) => actualizarSolCampo("moto", e.target.value)}
+                  />
+                </div>
+
+                {solError && <p className={styles.modalError}>{solError}</p>}
+
+                <button className={styles.addBtn} disabled={solEnviando} onClick={enviarSolicitud}>
+                  {solEnviando ? "Enviando…" : "Enviar"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

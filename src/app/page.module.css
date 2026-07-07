@@ -76,6 +76,166 @@
   color: var(--texto-muted);
 }
 
+/* Confianza */
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-bottom: 20px;
+}
+.trustItem {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--verde-texto);
+  white-space: nowrap;
+}
+
+/* Tagline */
+.tagline {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-claro);
+  margin-bottom: 12px;
+}
+.taglineHighlight {
+  color: #fbbf24;
+}
+.taglineDivider {
+  width: 64px;
+  height: 2px;
+  background: var(--rojo);
+  margin-bottom: 24px;
+}
+
+/* ¿No sabes tu número de parte? */
+.helpBox {
+  border: 1px dashed var(--borde);
+  width: 100%;
+  margin-top: 16px;
+  padding: 20px 24px;
+  text-align: center;
+}
+.helpBoxTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--texto-claro);
+  margin-bottom: 6px;
+}
+.helpBoxText {
+  font-size: 0.85rem;
+  color: var(--texto-muted);
+}
+.helpBoxLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.helpBoxSub {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: var(--texto-muted);
+}
+
+/* Modal de solicitud */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+.modalCard {
+  position: relative;
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+  max-width: 440px;
+  padding: 32px 28px;
+}
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: 1px solid var(--borde);
+  color: var(--texto-muted);
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+.modalClose:hover {
+  border-color: var(--rojo);
+  color: var(--rojo);
+}
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--blanco);
+  margin-bottom: 6px;
+}
+.modalSub {
+  font-size: 0.78rem;
+  color: var(--texto-muted);
+  margin-bottom: 20px;
+}
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.modalField label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.modalField input {
+  width: 100%;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.modalField input:focus {
+  border-color: var(--rojo);
+}
+.modalError {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f87171;
+}
+.modalSuccess {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--texto-claro);
+  line-height: 1.5;
+}
+
 /* Search card */
 .searchCard {
   background: var(--negro-card);
