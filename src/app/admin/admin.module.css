@@ -407,6 +407,11 @@
   border-color: #92400e;
   background: rgba(120, 53, 15, 0.2);
 }
+.badge.refunded {
+  color: #c4b5fd;
+  border-color: #5b21b6;
+  background: rgba(91, 33, 182, 0.2);
+}
 
 /* Pedidos */
 .pedidoRow {

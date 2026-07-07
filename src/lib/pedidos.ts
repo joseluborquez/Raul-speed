@@ -3,7 +3,7 @@ import type { MetodoEnvio } from "./metodoEnvio";
 
 export type { MetodoEnvio } from "./metodoEnvio";
 export type MetodoPago = "mercadopago" | "webpay" | "flow";
-export type EstadoPedido = "pendiente" | "pagado" | "fallido" | "expirado";
+export type EstadoPedido = "pendiente" | "pagado" | "fallido" | "expirado" | "reembolsado";
 
 export interface ItemPedido {
   partNumber: string;
@@ -149,6 +149,24 @@ export async function marcarPedidoFallido(
     .update({ estado: "fallido", raw_provider_payload: rawProviderPayload })
     .eq("id", pedidoId)
     .eq("estado", "pendiente");
+}
+
+/**
+ * Marca un pedido ya pagado como reembolsado o contracargado. A
+ * diferencia de marcarPedidoFallido, el filtro exige que el pedido esté
+ * en "pagado" — un reembolso solo tiene sentido después de un cobro
+ * exitoso, y así se evita pisar un pedido que nunca llegó a pagarse.
+ */
+export async function marcarPedidoReembolsado(
+  pedidoId: string,
+  rawProviderPayload: unknown,
+): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase
+    .from("pedidos")
+    .update({ estado: "reembolsado", raw_provider_payload: rawProviderPayload })
+    .eq("id", pedidoId)
+    .eq("estado", "pagado");
 }
 
 /**

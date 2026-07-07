@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { METODO_ENVIO_LABELS, type MetodoEnvio } from "@/lib/metodoEnvio";
+import { describirMotivoPago } from "@/lib/motivoPago";
 import type { EstadoPedido, ItemPedido, MetodoPago } from "@/lib/pedidos";
 import { createClient } from "@/lib/supabase/client";
 import styles from "../admin.module.css";
@@ -27,6 +28,7 @@ interface PedidoRow {
   direccion: string;
   estado: EstadoPedido;
   metodo_pago: MetodoPago | null;
+  raw_provider_payload: unknown;
 }
 
 const FILTROS: { value: EstadoPedido | "todos"; label: string }[] = [
@@ -35,6 +37,7 @@ const FILTROS: { value: EstadoPedido | "todos"; label: string }[] = [
   { value: "pagado", label: "Pagado" },
   { value: "fallido", label: "Fallido" },
   { value: "expirado", label: "Expirado" },
+  { value: "reembolsado", label: "Reembolsado" },
 ];
 
 function fmt(n: number): string {
@@ -54,6 +57,7 @@ function fmtFecha(iso: string): string {
 function badgeClass(estado: EstadoPedido): string {
   if (estado === "pagado") return styles.ok;
   if (estado === "fallido" || estado === "expirado") return styles.error;
+  if (estado === "reembolsado") return styles.refunded;
   return styles.pending;
 }
 
@@ -157,6 +161,20 @@ export default function AdminPedidosPage() {
               {expandidoId === pedido.id && (
                 <div className={styles.pedidoDetalle}>
                   <div className={styles.details}>
+                    {(() => {
+                      const motivo = describirMotivoPago(
+                        pedido.metodo_pago,
+                        pedido.raw_provider_payload,
+                      );
+                      return (
+                        motivo && (
+                          <div className={styles.detailRow}>
+                            <span className={styles.key}>Motivo</span>
+                            <span className={styles.value}>{motivo}</span>
+                          </div>
+                        )
+                      );
+                    })()}
                     {pedido.items.map((item, i) => (
                       <div className={styles.detailRow} key={i}>
                         <span className={styles.key}>

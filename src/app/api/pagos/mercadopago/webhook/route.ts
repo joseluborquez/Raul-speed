@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verificarPago } from "@/lib/pagos/mercadopago";
-import { marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
+import { marcarPedidoFallido, marcarPedidoPagado, marcarPedidoReembolsado } from "@/lib/pedidos";
 
 async function extraerPaymentId(request: Request): Promise<string | null> {
   const url = new URL(request.url);
@@ -35,9 +35,12 @@ export async function POST(request: Request) {
         await marcarPedidoPagado(pedidoId, pago);
       } else if (pago.status === "rejected" || pago.status === "cancelled") {
         await marcarPedidoFallido(pedidoId, pago);
+      } else if (pago.status === "refunded" || pago.status === "charged_back") {
+        // Llega en un webhook posterior, cuando el pedido ya estaba "pagado".
+        await marcarPedidoReembolsado(pedidoId, pago);
       }
-      // "in_process" / "pending": se deja el pedido pendiente; Mercado
-      // Pago reenvía el webhook cuando el estado cambie.
+      // "in_process" / "pending" / "authorized": se deja el pedido
+      // pendiente; Mercado Pago reenvía el webhook cuando el estado cambie.
     }
   } catch {
     // Se responde 200 igual para que Mercado Pago no reintente en loop

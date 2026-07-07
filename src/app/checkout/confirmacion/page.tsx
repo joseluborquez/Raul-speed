@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import styles from "../checkout.module.css";
 
-type Estado = "pendiente" | "pagado" | "fallido" | "expirado";
+type Estado = "pendiente" | "pagado" | "fallido" | "expirado" | "reembolsado";
 type EstadoUi = Estado | "cargando" | "error";
 
 const MAX_INTENTOS = 10;
@@ -115,6 +115,13 @@ function ConfirmacionContenido() {
               <p className={styles.confirmMsg}>
                 ❌ <strong>Pago rechazado.</strong>{" "}
                 <Link href="/">Vuelve al cotizador</Link> para intentar con otro método.
+              </p>
+            )}
+
+            {estado === "reembolsado" && (
+              <p className={styles.confirmMsg}>
+                ↩️ <strong>Este pedido fue reembolsado.</strong>{" "}
+                Contáctanos por WhatsApp si tienes dudas.
               </p>
             )}
 
