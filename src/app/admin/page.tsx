@@ -26,6 +26,10 @@ export default function AdminPage() {
   const [logisticaGuardando, setLogisticaGuardando] = useState(false);
   const [logisticaMsg, setLogisticaMsg] = useState<string | null>(null);
 
+  const descuentoDhlInputRef = useRef<HTMLInputElement>(null);
+  const [descuentoDhlGuardando, setDescuentoDhlGuardando] = useState(false);
+  const [descuentoDhlMsg, setDescuentoDhlMsg] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
   const [error, setError] = useState<{ title: string; msg: string } | null>(null);
@@ -54,6 +58,9 @@ export default function AdminPage() {
       const d = await r.json();
       if (logisticaInputRef.current) {
         logisticaInputRef.current.value = String(d.costoLogisticaClp ?? 0);
+      }
+      if (descuentoDhlInputRef.current) {
+        descuentoDhlInputRef.current.value = String(d.descuentoSobrecargoDhlPct ?? 50);
       }
       if (d.tipoCambioManual !== null && d.tipoCambioManual !== undefined) {
         if (manualInputRef.current) manualInputRef.current.value = String(d.tipoCambioManual);
@@ -92,6 +99,33 @@ export default function AdminPage() {
       setLogisticaMsg("Error de conexión");
     }
     setLogisticaGuardando(false);
+  }
+
+  async function guardarDescuentoDhl() {
+    const val = Number(descuentoDhlInputRef.current?.value ?? "");
+    if (!Number.isFinite(val) || val < 0 || val > 100) {
+      setDescuentoDhlMsg("Ingresa un valor entre 0 y 100");
+      return;
+    }
+
+    setDescuentoDhlGuardando(true);
+    setDescuentoDhlMsg(null);
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ descuentoSobrecargoDhlPct: val }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setDescuentoDhlMsg(d.error || "No se pudo guardar");
+      } else {
+        setDescuentoDhlMsg("Guardado");
+      }
+    } catch {
+      setDescuentoDhlMsg("Error de conexión");
+    }
+    setDescuentoDhlGuardando(false);
   }
 
   async function guardarManual() {
@@ -309,6 +343,42 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Descuento sobrecargo por volumen (DHL) */}
+        <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
+          Sobrecargo por Volumen (DHL)
+        </div>
+        <div className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <span>
+              Piezas sin peso/tamaño en Impex: se cobra este % del flete DHL real
+            </span>
+          </div>
+          <div className={styles.tcBody}>
+            <div className={styles.tcManualRow}>
+              <label htmlFor="descuentoDhlInput">Descuento sobre flete DHL</label>
+              <input
+                id="descuentoDhlInput"
+                ref={descuentoDhlInputRef}
+                className={styles.tcManualInput}
+                type="number"
+                step="1"
+                min="0"
+                max="100"
+                placeholder="Ej: 50"
+              />
+              <span className={styles.tcUnit}>%</span>
+              <button
+                className={styles.btnRefreshTasa}
+                disabled={descuentoDhlGuardando}
+                onClick={guardarDescuentoDhl}
+              >
+                {descuentoDhlGuardando ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
+            {descuentoDhlMsg && <span className={styles.tcAutoFuente}>{descuentoDhlMsg}</span>}
+          </div>
+        </div>
+
         {/* Buscador */}
         <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>Búsqueda</div>
         <div className={styles.panel}>
@@ -395,6 +465,12 @@ export default function AdminPage() {
                 <span className={styles.key}>Costo logística</span>
                 <span className={styles.value}>
                   ${fmt(resultado.costoLogisticaClp ?? 0)} CLP
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.key}>Peso (Impex)</span>
+                <span className={styles.value}>
+                  {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato (posible sobrecargo)"}
                 </span>
               </div>
               <div className={styles.detailRow}>

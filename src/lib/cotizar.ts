@@ -18,11 +18,34 @@ export interface ResultadoCotizacion {
   precioClpFinal?: number;
   fuente?: string;
   esGenuino?: boolean;
+  /** Peso en kg reportado por Impex. 0 = sin dato (posible pieza voluminosa). */
+  pesoKg?: number;
   fecha: string;
 }
 
 function hoyIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export interface TipoCambioActivo {
+  tasa: number;
+  fuente: string;
+}
+
+/**
+ * Devuelve la tasa JPY→CLP a usar: la manual del admin si está fijada,
+ * si no la del Banco Central (con fallback). Compartida entre el
+ * cotizador principal y el cálculo de sobrecargo por volumen para que
+ * ambos usen siempre la misma tasa.
+ */
+export async function obtenerTipoCambioActivo(
+  tipoCambioManual: number | null,
+): Promise<TipoCambioActivo> {
+  if (tipoCambioManual !== null) {
+    return { tasa: tipoCambioManual, fuente: "Manual (administrador)" };
+  }
+  const tc = await getJpyToClp();
+  return { tasa: tc.tasa, fuente: tc.fuente };
 }
 
 /**
@@ -63,24 +86,19 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   let tipoCambio: number;
   let fuenteTc: string;
 
-  if (tipoCambioManual !== null) {
-    tipoCambio = tipoCambioManual;
-    fuenteTc = "Manual (administrador)";
-  } else {
-    try {
-      const tc = await getJpyToClp();
-      tipoCambio = tc.tasa;
-      fuenteTc = tc.fuente;
-    } catch (exc) {
-      return {
-        partNumber,
-        estado: "error_tipo_cambio",
-        mensaje: exc instanceof Error ? exc.message : String(exc),
-        precioJpy,
-        fuente,
-        fecha: hoyIso(),
-      };
-    }
+  try {
+    const tc = await obtenerTipoCambioActivo(tipoCambioManual);
+    tipoCambio = tc.tasa;
+    fuenteTc = tc.fuente;
+  } catch (exc) {
+    return {
+      partNumber,
+      estado: "error_tipo_cambio",
+      mensaje: exc instanceof Error ? exc.message : String(exc),
+      precioJpy,
+      fuente,
+      fecha: hoyIso(),
+    };
   }
 
   // 3. Aplicar fórmula de negocio y sumar el costo de logística.
@@ -100,6 +118,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     precioClpFinal,
     fuente,
     esGenuino: resultadoImpex.esGenuino,
+    pesoKg: resultadoImpex.pesoKg,
     fecha: hoyIso(),
   };
 }

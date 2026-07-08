@@ -488,6 +488,94 @@
   color: var(--texto-claro);
 }
 
+/* Sobrecargo por volumen: peso/tamaño manual */
+.volBox {
+  margin: 0 28px 20px;
+  padding: 20px;
+  background: rgba(146, 64, 14, 0.1);
+  border: 1px solid #92400e;
+}
+.volBoxTitle {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 8px;
+}
+.volBoxText {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--texto-claro);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.volBoxRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.volBoxField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.volBoxField label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.volBoxField input {
+  width: 100%;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.volBoxField input:focus {
+  border-color: var(--rojo);
+}
+.volBoxError {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f87171;
+  margin-bottom: 12px;
+}
+.volBoxBtn {
+  width: 100%;
+  background: transparent;
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.volBoxBtn:hover {
+  background: #fbbf24;
+  color: var(--negro);
+}
+.volBoxBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .volBoxRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Agregar al carrito de compras */
 .addRow {
   padding: 4px 28px 24px;

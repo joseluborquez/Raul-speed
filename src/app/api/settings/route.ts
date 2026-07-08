@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { esEmailAdmin } from "@/lib/adminAuth";
-import { getSettings, updateCostoLogisticaClp, updateTipoCambioManual } from "@/lib/settings";
+import {
+  getSettings,
+  updateCostoLogisticaClp,
+  updateDescuentoSobrecargoDhlPct,
+  updateTipoCambioManual,
+} from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -39,6 +44,17 @@ export async function PUT(request: Request) {
       }
       await updateTipoCambioManual(valor);
     }
+  }
+
+  if ("descuentoSobrecargoDhlPct" in body) {
+    const valor = Number(body.descuentoSobrecargoDhlPct);
+    if (!Number.isFinite(valor) || valor < 0 || valor > 100) {
+      return NextResponse.json(
+        { error: "Descuento inválido (debe ser entre 0 y 100)" },
+        { status: 400 },
+      );
+    }
+    await updateDescuentoSobrecargoDhlPct(valor);
   }
 
   const settings = await getSettings();

@@ -9,6 +9,8 @@ export interface ImpexResultado {
   maker: string;
   nombre: string;
   esGenuino: boolean;
+  /** Peso en kg reportado por Impex. 0 = Impex no tiene el dato (típico en piezas grandes/voluminosas). */
+  pesoKg: number;
 }
 
 const IMPEX_API_URL = "https://www.impex-jp.com/api/parts/search.html";
@@ -90,6 +92,7 @@ async function impexApiFetch(partNumber: string): Promise<ImpexResultado | null>
       maker: part.mark ?? "",
       nombre: part.name_eng || part.name || "",
       esGenuino: true,
+      pesoKg: Number(part.weight) || 0,
     };
   }
   return null;

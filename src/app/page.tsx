@@ -35,6 +35,16 @@ export default function Home() {
 
   const [verMasSobrecargo, setVerMasSobrecargo] = useState(false);
 
+  interface SobrecargoInfo {
+    envioDhlJpy: number;
+    envioDhlClp: number;
+    sobrecargoClp: number;
+  }
+  const [volForm, setVolForm] = useState({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
+  const [sobrecargo, setSobrecargo] = useState<SobrecargoInfo | null>(null);
+  const [sobrecargoCalculando, setSobrecargoCalculando] = useState(false);
+  const [sobrecargoError, setSobrecargoError] = useState<string | null>(null);
+
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
     if (!part) {
@@ -46,6 +56,9 @@ export default function Home() {
     setResultado(null);
     setError(null);
     setCantidad(1);
+    setVolForm({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
+    setSobrecargo(null);
+    setSobrecargoError(null);
 
     let data: ResultadoCotizacion;
     try {
@@ -75,6 +88,43 @@ export default function Home() {
     }
   }
 
+  function actualizarVolCampo(campo: keyof typeof volForm, valor: string) {
+    setVolForm((prev) => ({ ...prev, [campo]: valor }));
+  }
+
+  async function calcularSobrecargo() {
+    const pesoKg = Number(volForm.pesoKg);
+    if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
+      setSobrecargoError("Ingresa un peso válido en kg");
+      return;
+    }
+
+    setSobrecargoCalculando(true);
+    setSobrecargoError(null);
+    setSobrecargo(null);
+    try {
+      const res = await fetch("/api/cotizar/sobrecargo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pesoKg,
+          largoCm: volForm.largoCm ? Number(volForm.largoCm) : undefined,
+          anchoCm: volForm.anchoCm ? Number(volForm.anchoCm) : undefined,
+          altoCm: volForm.altoCm ? Number(volForm.altoCm) : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSobrecargoError(data.error || "No se pudo calcular el sobrecargo");
+      } else {
+        setSobrecargo(data);
+      }
+    } catch {
+      setSobrecargoError("Error de conexión");
+    }
+    setSobrecargoCalculando(false);
+  }
+
   function agregarAlCarrito() {
     if (!resultado || resultado.estado !== "ok") return;
 
@@ -85,13 +135,16 @@ export default function Home() {
         partNumber: resultado.partNumber,
         maker: resultado.maker,
         nombre: resultado.nombre,
-        precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+        precioRepuestoClp: (resultado.precioRepuestoClp ?? 0) + (sobrecargo?.sobrecargoClp ?? 0),
         cantidad,
       },
     ]);
 
     setResultado(null);
     setCantidad(1);
+    setVolForm({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
+    setSobrecargo(null);
+    setSobrecargoError(null);
     if (inputRef.current) {
       inputRef.current.value = "";
       inputRef.current.focus();
@@ -258,7 +311,7 @@ export default function Home() {
               <div className={styles.priceLabel}>Precio en Peso Chileno</div>
               <div>
                 <span className={styles.priceAmount}>
-                  {fmt(resultado.precioClpFinal ?? 0)}
+                  {fmt((resultado.precioClpFinal ?? 0) + (sobrecargo?.sobrecargoClp ?? 0))}
                 </span>
                 <span className={styles.priceCurrency}>CLP · IVA incluido</span>
               </div>
@@ -269,10 +322,88 @@ export default function Home() {
                 <span className={styles.value}>{resultado.maker || "—"}</span>
               </div>
               <div className={styles.infoRow}>
+                <span className={styles.key}>Peso</span>
+                <span className={styles.value}>
+                  {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato"}
+                </span>
+              </div>
+              {sobrecargo && (
+                <div className={styles.infoRow}>
+                  <span className={styles.key}>Sobrecargo por volumen (envío)</span>
+                  <span className={styles.value}>${fmt(sobrecargo.sobrecargoClp)} CLP</span>
+                </div>
+              )}
+              <div className={styles.infoRow}>
                 <span className={styles.key}>Fecha consulta</span>
                 <span className={styles.value}>{resultado.fecha}</span>
               </div>
             </div>
+
+            {!resultado.pesoKg && (
+              <div className={styles.volBox}>
+                <p className={styles.volBoxTitle}>
+                  ⚠️ Esta pieza no tiene peso/tamaño estándar en Impex
+                </p>
+                <p className={styles.volBoxText}>
+                  Suele tratarse de una pieza grande o voluminosa (carenados, estanques,
+                  basculantes, etc). Ingresa el peso y tamaño real del paquete para calcular
+                  el sobrecargo por envío.
+                </p>
+                <div className={styles.volBoxRow}>
+                  <div className={styles.volBoxField}>
+                    <label htmlFor="volPeso">Peso (kg) *</label>
+                    <input
+                      id="volPeso"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={volForm.pesoKg}
+                      onChange={(e) => actualizarVolCampo("pesoKg", e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.volBoxField}>
+                    <label htmlFor="volLargo">Largo (cm)</label>
+                    <input
+                      id="volLargo"
+                      type="number"
+                      min="0"
+                      value={volForm.largoCm}
+                      onChange={(e) => actualizarVolCampo("largoCm", e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.volBoxField}>
+                    <label htmlFor="volAncho">Ancho (cm)</label>
+                    <input
+                      id="volAncho"
+                      type="number"
+                      min="0"
+                      value={volForm.anchoCm}
+                      onChange={(e) => actualizarVolCampo("anchoCm", e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.volBoxField}>
+                    <label htmlFor="volAlto">Alto (cm)</label>
+                    <input
+                      id="volAlto"
+                      type="number"
+                      min="0"
+                      value={volForm.altoCm}
+                      onChange={(e) => actualizarVolCampo("altoCm", e.target.value)}
+                    />
+                  </div>
+                </div>
+                {sobrecargoError && <p className={styles.volBoxError}>{sobrecargoError}</p>}
+                <button
+                  type="button"
+                  className={styles.volBoxBtn}
+                  disabled={sobrecargoCalculando}
+                  onClick={calcularSobrecargo}
+                >
+                  {sobrecargoCalculando ? "Calculando…" : "Calcular sobrecargo por envío"}
+                </button>
+              </div>
+            )}
+
             <div className={styles.addRow}>
               <div className={styles.qtyRow}>
                 <span className={styles.qtyLabel}>Cantidad</span>
