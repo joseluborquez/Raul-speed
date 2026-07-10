@@ -4,7 +4,7 @@
 // tráfico repartido entre muchas instancias/regiones. Si algún día se
 // necesita algo robusto habría que sumar un store compartido (Upstash
 // Redis / Vercel KV) — por ahora esto evita el abuso simple que ya
-// causó que se agotara la cuota de la API de Impex.
+// causó que se agotara la cuota de la API del proveedor de precios.
 
 interface Bucket {
   count: number;

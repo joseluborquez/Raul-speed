@@ -1,8 +1,8 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
-import { buscarImpexApi } from "./impex";
 import { getSettings } from "./settings";
+import { buscarYumbo } from "./yumbo";
 
 export interface ResultadoCotizacion {
   partNumber: string;
@@ -18,7 +18,7 @@ export interface ResultadoCotizacion {
   precioClpFinal?: number;
   fuente?: string;
   esGenuino?: boolean;
-  /** Peso en kg reportado por Impex. 0 = sin dato (posible pieza voluminosa). */
+  /** Peso en kg reportado por Yumbo. 0 = sin dato (posible pieza voluminosa). */
   pesoKg?: number;
   fecha: string;
 }
@@ -54,10 +54,10 @@ export async function obtenerTipoCambioActivo(
 export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
 
-  // 1. Obtener precio JPY desde Impex Japan.
-  let resultadoImpex;
+  // 1. Obtener precio JPY desde Yumbo Japan.
+  let resultadoYumbo;
   try {
-    resultadoImpex = await buscarImpexApi(partNumber);
+    resultadoYumbo = await buscarYumbo(partNumber);
   } catch (exc) {
     return {
       partNumber,
@@ -67,7 +67,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  if (resultadoImpex === null) {
+  if (resultadoYumbo === null) {
     return {
       partNumber,
       estado: "no_encontrado",
@@ -76,7 +76,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  const { precioJpy, fuente } = resultadoImpex;
+  const { precioJpy, fuente } = resultadoYumbo;
 
   // 2. Obtener tipo de cambio JPY → CLP.
   // Si el admin fijó una tasa manual (global, en Supabase), se usa para
@@ -108,8 +108,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   return {
     partNumber,
     estado: "ok",
-    maker: resultadoImpex.maker,
-    nombre: resultadoImpex.nombre,
+    maker: resultadoYumbo.maker,
+    nombre: resultadoYumbo.nombre,
     precioJpy,
     tipoCambioClp: Number(tipoCambio.toFixed(6)),
     fuenteTipoCambio: fuenteTc,
@@ -117,8 +117,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     costoLogisticaClp,
     precioClpFinal,
     fuente,
-    esGenuino: resultadoImpex.esGenuino,
-    pesoKg: resultadoImpex.pesoKg,
+    esGenuino: resultadoYumbo.esGenuino,
+    pesoKg: resultadoYumbo.pesoKg,
     fecha: hoyIso(),
   };
 }

@@ -6,7 +6,7 @@ export interface Settings {
   tipoCambioManual: number | null;
   /**
    * Descuento (%) aplicado al costo de envío DHL antes de cobrarlo como
-   * sobrecargo por volumen en piezas sin peso/tamaño estándar en Impex.
+   * sobrecargo por volumen en piezas sin peso/tamaño estándar en Yumbo.
    * Ej: 50 = se cobra la mitad del flete DHL real.
    */
   descuentoSobrecargoDhlPct: number;

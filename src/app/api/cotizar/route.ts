@@ -3,7 +3,7 @@ import { cotizar } from "@/lib/cotizar";
 import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
-  // Cada consulta golpea la API de Impex con nuestra key — sin límite,
+  // Cada consulta golpea la API de Yumbo con nuestra key — sin límite,
   // un script puede agotar la cuota (ya pasó una vez).
   const ip = obtenerIp(request);
   if (rateLimitExcedido(`cotizar:${ip}`, 20, 60_000)) {

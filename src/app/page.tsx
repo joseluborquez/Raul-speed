@@ -342,7 +342,7 @@ export default function Home() {
             {!resultado.pesoKg && (
               <div className={styles.volBox}>
                 <p className={styles.volBoxTitle}>
-                  ⚠️ Esta pieza no tiene peso/tamaño estándar en Impex
+                  ⚠️ Esta pieza no tiene peso/tamaño estándar en Yumbo
                 </p>
                 <p className={styles.volBoxText}>
                   Suele tratarse de una pieza grande o voluminosa (carenados, estanques,

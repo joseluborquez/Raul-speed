@@ -350,7 +350,7 @@ export default function AdminPage() {
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <span>
-              Piezas sin peso/tamaño en Impex: se cobra este % del flete DHL real
+              Piezas sin peso/tamaño en Yumbo: se cobra este % del flete DHL real
             </span>
           </div>
           <div className={styles.tcBody}>
@@ -403,7 +403,7 @@ export default function AdminPage() {
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
           <div className={styles.spinner} />
-          <span>Consultando Impex Japan…</span>
+          <span>Consultando Yumbo Japan…</span>
         </div>
 
         {error && (
@@ -468,7 +468,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className={styles.detailRow}>
-                <span className={styles.key}>Peso (Impex)</span>
+                <span className={styles.key}>Peso (Yumbo)</span>
                 <span className={styles.value}>
                   {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato (posible sobrecargo)"}
                 </span>

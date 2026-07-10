@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   // El precio nunca se toma del navegador: cada partNumber se vuelve a
-  // cotizar contra Impex acá mismo. De lo contrario, cualquiera podría
+  // cotizar contra Yumbo acá mismo. De lo contrario, cualquiera podría
   // editar el precioRepuestoClp que manda el cliente y pagar menos de lo
   // real — el navegador solo puede decidir *qué* partNumber y *cuántas*
   // unidades, nunca el precio.
