@@ -6,6 +6,8 @@
 // Auth:     header X-Api-Key (se obtiene en https://yumbo-jp.com/user/user/profile.html)
 
 import { YUMBO_API_KEY } from "./config";
+import { getCache, setCache } from "./yumboCache";
+import { isPaused, recordFailure, recordSuccess } from "./yumboCircuitBreaker";
 
 export interface YumboResultado {
   precioJpy: number;
@@ -58,11 +60,30 @@ function normalizar(partNumber: string): string[] {
 export async function buscarYumbo(partNumber: string): Promise<YumboResultado | null> {
   if (!YUMBO_API_KEY) return null;
 
-  for (const variante of normalizar(partNumber)) {
-    const resultado = await yumboApiFetch(variante);
-    if (resultado) return resultado;
+  const clave = partNumber.trim().toUpperCase();
+
+  const cacheado = await getCache(clave);
+  if (cacheado) return cacheado.resultado;
+
+  const circuito = await isPaused();
+  if (circuito.pausado) {
+    const minutos = circuito.pausadoHasta
+      ? Math.ceil((circuito.pausadoHasta.getTime() - Date.now()) / 60_000)
+      : null;
+    throw new Error(
+      `Proveedor de precios pausado temporalmente por exceso de consultas.` +
+        (minutos ? ` Reintenta en ~${minutos} min.` : ""),
+    );
   }
-  return null;
+
+  let resultado: YumboResultado | null = null;
+  for (const variante of normalizar(clave)) {
+    resultado = await yumboApiFetch(variante);
+    if (resultado) break;
+  }
+
+  await setCache(clave, resultado);
+  return resultado;
 }
 
 async function yumboApiFetch(partNumber: string): Promise<YumboResultado | null> {
@@ -71,17 +92,33 @@ async function yumboApiFetch(partNumber: string): Promise<YumboResultado | null>
     ignoreAlternate: "true",
   });
 
-  const resp = await fetch(`${YUMBO_API_URL}?${params.toString()}`, {
-    headers: {
-      "X-Api-Key": YUMBO_API_KEY,
-      accept: "application/json",
-    },
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!resp.ok) throw new Error(`Yumbo respondió con estado ${resp.status}`);
+  let resp: Response;
+  try {
+    resp = await fetch(`${YUMBO_API_URL}?${params.toString()}`, {
+      headers: {
+        "X-Api-Key": YUMBO_API_KEY,
+        accept: "application/json",
+      },
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (exc) {
+    const mensaje = exc instanceof Error ? exc.message : String(exc);
+    await recordFailure(null, mensaje);
+    throw exc;
+  }
+
+  if (!resp.ok) {
+    await recordFailure(resp.status, `Yumbo respondió con estado ${resp.status}`);
+    throw new Error(`Yumbo respondió con estado ${resp.status}`);
+  }
 
   const data: YumboParte[] = await resp.json();
-  if (!Array.isArray(data)) throw new Error("Yumbo: respuesta inesperada");
+  if (!Array.isArray(data)) {
+    await recordFailure(resp.status, "Yumbo: respuesta inesperada");
+    throw new Error("Yumbo: respuesta inesperada");
+  }
+
+  await recordSuccess();
 
   for (const parte of data) {
     if (parte.isDiscontinued) continue;

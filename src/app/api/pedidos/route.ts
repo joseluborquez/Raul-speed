@@ -3,6 +3,7 @@ import { cotizar } from "@/lib/cotizar";
 import { crearPedido, type ItemPedido, type MetodoEnvio } from "@/lib/pedidos";
 import { getSettings } from "@/lib/settings";
 import { limpiarRut, validarRut } from "@/lib/rut";
+import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 
 const MAX_ITEMS_POR_PEDIDO = 30;
 
@@ -31,6 +32,18 @@ const CAMPOS_TEXTO_REQUERIDOS = [
 ] as const;
 
 export async function POST(request: Request) {
+  // Este endpoint puede re-cotizar hasta MAX_ITEMS_POR_PEDIDO partNumbers
+  // distintos contra Yumbo en una sola llamada — sin límite, un carrito
+  // armado a propósito con ítems inválidos podía golpear la API de Yumbo
+  // muchas más veces que /api/cotizar sin pasar por su rate limit.
+  const ip = obtenerIp(request);
+  if (rateLimitExcedido(`pedidos:${ip}`, 5, 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiados intentos seguidos. Espera un minuto e intenta de nuevo." },
+      { status: 429 },
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
 
   const itemsRaw: ItemPedido[] = Array.isArray(body?.items) ? body.items : [];
