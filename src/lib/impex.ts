@@ -43,20 +43,31 @@ interface ImpexParte {
 }
 
 /**
- * Devuelve variantes del N/P: con y sin guión.
- * "90915-YZZD4" → ["90915-YZZD4", "90915YZZD4"]
- * "90915YZZD4"  → ["90915YZZD4", "90915-YZZD4"]
+ * Devuelve variantes del N/P probando los formatos de guión más comunes
+ * en repuestos OEM japoneses:
+ * - 2 segmentos (Toyota/Suzuki/Kawasaki): 5 caracteres + resto.
+ *   "13089-1075" → ["13089-1075", "130891075"]
+ *   "130891075"  → ["130891075", "13089-1075"]
+ * - 3 segmentos (Yamaha): código de modelo (3) + básico (5) + diseño (2).
+ *   "4XV-25384-00" → ["4XV-25384-00", "4XV2538400"]
+ *   "4XV2538400"   → ["4XV2538400", "4XV25-38400" (2 seg.), "4XV-25384-00" (3 seg.)]
  */
 function normalizar(partNumber: string): string[] {
   const pn = partNumber.trim().toUpperCase();
-  const variantes = [pn];
+  const variantes = new Set<string>([pn]);
+
   if (pn.includes("-")) {
-    variantes.push(pn.replaceAll("-", ""));
+    variantes.add(pn.replaceAll("-", ""));
   } else {
-    const m = pn.match(/^(\d{5})([A-Z0-9]+)$/);
-    if (m) variantes.push(`${m[1]}-${m[2]}`);
+    if (pn.length > 5) {
+      variantes.add(`${pn.slice(0, 5)}-${pn.slice(5)}`);
+    }
+    if (pn.length === 10) {
+      variantes.add(`${pn.slice(0, 3)}-${pn.slice(3, 8)}-${pn.slice(8)}`);
+    }
   }
-  return variantes;
+
+  return [...variantes];
 }
 
 /**
