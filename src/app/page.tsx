@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { CARRITO_STORAGE_KEY, type ItemCotizacion } from "@/lib/carrito";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
+import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
 import styles from "./page.module.css";
 
 function fmt(n: number): string {
@@ -86,7 +87,8 @@ export default function Home() {
         partNumber: resultado.partNumber,
         maker: resultado.maker,
         nombre: resultado.nombre,
-        precioRepuestoClp: (resultado.precioRepuestoClp ?? 0) + (resultado.envioExtraClp ?? 0),
+        precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+        pesoKg: resultado.pesoKg ?? 0,
         cantidad,
       },
     ]);
@@ -162,6 +164,7 @@ export default function Home() {
   }
 
   function procederAlPago() {
+    if (calcularSobrecargoCarrito(items).resultado === "alerta_whatsapp") return;
     sessionStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify({ items, costoLogisticaClp }));
     router.push("/checkout");
   }
@@ -170,7 +173,12 @@ export default function Home() {
     (sum, item) => sum + item.precioRepuestoClp * item.cantidad,
     0,
   );
-  const totalCotizacion = subtotalRepuestos + (items.length > 0 ? costoLogisticaClp : 0);
+  const pesoTotalCarritoKg = items.reduce((sum, item) => sum + item.pesoKg * item.cantidad, 0);
+  const clasificacionCarrito = calcularSobrecargoCarrito(items);
+  const sobrecargoCarritoClp = clasificacionCarrito.extraClp;
+  const bloqueadoPorPeso = clasificacionCarrito.resultado === "alerta_whatsapp";
+  const totalCotizacion =
+    subtotalRepuestos + sobrecargoCarritoClp + (items.length > 0 ? costoLogisticaClp : 0);
 
   return (
     <>
@@ -268,20 +276,14 @@ export default function Home() {
                 <span className={styles.value}>{resultado.maker || "—"}</span>
               </div>
               <div className={styles.infoRow}>
+                <span className={styles.key}>Repuesto</span>
+                <span className={styles.value}>{resultado.nombre || "—"}</span>
+              </div>
+              <div className={styles.infoRow}>
                 <span className={styles.key}>Peso</span>
                 <span className={styles.value}>
                   {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato"}
                 </span>
-              </div>
-              {resultado.envioResultado === "extra_automatico" && (
-                <div className={styles.infoRow}>
-                  <span className={styles.key}>Extra por peso</span>
-                  <span className={styles.value}>${fmt(resultado.envioExtraClp ?? 0)} CLP</span>
-                </div>
-              )}
-              <div className={styles.infoRow}>
-                <span className={styles.key}>Fecha consulta</span>
-                <span className={styles.value}>{resultado.fecha}</span>
               </div>
             </div>
 
@@ -389,9 +391,19 @@ export default function Home() {
             ))}
             <div className={styles.cartTotals}>
               <div className={styles.cartTotalRow}>
+                <span>Peso total</span>
+                <span>{pesoTotalCarritoKg ? `${pesoTotalCarritoKg} kg` : "Sin dato"}</span>
+              </div>
+              <div className={styles.cartTotalRow}>
                 <span>Subtotal repuestos</span>
                 <span>${fmt(subtotalRepuestos)} CLP</span>
               </div>
+              {sobrecargoCarritoClp > 0 && (
+                <div className={styles.cartTotalRow}>
+                  <span>Sobrecargo por peso</span>
+                  <span>${fmt(sobrecargoCarritoClp)} CLP</span>
+                </div>
+              )}
               <div className={styles.cartTotalRow}>
                 <span>Costo de logística (único)</span>
                 <span>${fmt(costoLogisticaClp)} CLP</span>
@@ -401,11 +413,30 @@ export default function Home() {
                 <span>${fmt(totalCotizacion)} CLP · IVA incluido</span>
               </div>
             </div>
-            <div className={styles.addRow}>
-              <button className={styles.addBtn} onClick={procederAlPago}>
-                Proceder al pago →
-              </button>
-            </div>
+
+            {bloqueadoPorPeso ? (
+              <div className={styles.envioAlertaBox}>
+                <p className={styles.envioAlertaTitle}>⚠️ Envío a cotizar</p>
+                <p className={styles.envioAlertaText}>{clasificacionCarrito.mensaje}</p>
+                <a
+                  className={styles.envioAlertaBtn}
+                  href={`https://wa.me/56954156358?text=${encodeURIComponent(
+                    `Hola, quiero cotizar el envío de mi pedido (peso total ~${pesoTotalCarritoKg} kg): ` +
+                      items.map((item) => `${item.partNumber} ×${item.cantidad}`).join(", "),
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Confirmar por WhatsApp
+                </a>
+              </div>
+            ) : (
+              <div className={styles.addRow}>
+                <button className={styles.addBtn} onClick={procederAlPago}>
+                  Proceder al pago →
+                </button>
+              </div>
+            )}
           </div>
         )}
 

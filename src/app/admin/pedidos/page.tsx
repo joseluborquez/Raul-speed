@@ -14,6 +14,8 @@ interface PedidoRow {
   created_at: string;
   items: ItemPedido[];
   subtotal_repuestos_clp: number;
+  sobrecargo_peso_clp: number;
+  peso_total_kg: number;
   costo_logistica_clp: number;
   total_clp: number;
   nombre_completo: string;
@@ -190,11 +192,23 @@ export default function AdminPedidosPage() {
                       </div>
                     ))}
                     <div className={styles.detailRow}>
+                      <span className={styles.key}>Peso total</span>
+                      <span className={styles.value}>
+                        {pedido.peso_total_kg ? `${pedido.peso_total_kg} kg` : "Sin dato"}
+                      </span>
+                    </div>
+                    <div className={styles.detailRow}>
                       <span className={styles.key}>Subtotal repuestos</span>
                       <span className={styles.value}>
                         ${fmt(pedido.subtotal_repuestos_clp)}
                       </span>
                     </div>
+                    {pedido.sobrecargo_peso_clp > 0 && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.key}>Sobrecargo por peso</span>
+                        <span className={styles.value}>${fmt(pedido.sobrecargo_peso_clp)}</span>
+                      </div>
+                    )}
                     <div className={styles.detailRow}>
                       <span className={styles.key}>Costo logística</span>
                       <span className={styles.value}>${fmt(pedido.costo_logistica_clp)}</span>

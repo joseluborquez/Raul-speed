@@ -78,12 +78,17 @@ function estandar(): ClasificacionEnvio {
   return { resultado: "estandar", extraClp: 0, mensaje: MENSAJE_ESTANDAR };
 }
 
-function alerta(): ClasificacionEnvio {
-  return { resultado: "alerta_whatsapp", extraClp: 0, mensaje: MENSAJE_ALERTA };
+function alerta(mensaje: string = MENSAJE_ALERTA): ClasificacionEnvio {
+  return { resultado: "alerta_whatsapp", extraClp: 0, mensaje };
+}
+
+/** (peso − 0,5) × $22.000, redondeado hacia arriba al múltiplo de $1.000. */
+function calcularExtraClp(pesoKg: number): number {
+  return Math.ceil(((pesoKg - PESO_INCLUIDO_KG) * COBRO_KILO_EXTRA_CLP) / 1000) * 1000;
 }
 
 function extraAutomatico(pesoKg: number): ClasificacionEnvio {
-  const monto = Math.ceil(((pesoKg - PESO_INCLUIDO_KG) * COBRO_KILO_EXTRA_CLP) / 1000) * 1000;
+  const monto = calcularExtraClp(pesoKg);
   return { resultado: "extra_automatico", extraClp: monto, mensaje: mensajeExtra(pesoKg, monto) };
 }
 
@@ -128,4 +133,48 @@ export function clasificarEnvio(datos: DatosClasificacion): ClasificacionEnvio {
 
   // Paso 5 — peso entre 0,5 y 4 kg.
   return extraAutomatico(pesoKg);
+}
+
+export interface ItemParaSobrecargo {
+  /** 0 = sin peso registrado (ya aceptado individualmente por precio bajo). */
+  pesoKg: number;
+  cantidad: number;
+}
+
+function mensajeExtraCarrito(pesoKg: number, montoClp: number): string {
+  return (
+    `Tu pedido pesa ${pesoKg} kg en total y supera el tramo gratuito de envío. ` +
+    `Se suman $${montoClp.toLocaleString("es-CL")} al total por envío.`
+  );
+}
+
+function mensajeAlertaCarrito(pesoKg: number): string {
+  return (
+    `El peso total de tu pedido (${pesoKg} kg) supera el máximo para el cálculo ` +
+    `automático de envío. Escríbenos por WhatsApp y te confirmamos el total antes de pagar.`
+  );
+}
+
+/**
+ * Sobrecargo por envío del PEDIDO completo, calculado sobre el peso
+ * ACUMULADO del carrito (no la suma de los sobrecargos individuales de
+ * cada pieza, que duplicaría el tramo gratuito de 0,5 kg una vez por
+ * pieza). Solo aplica los pasos 3/4/5 de clasificarEnvio(): el nombre y el
+ * precio ya filtraron qué piezas pueden llegar al carrito, así que acá solo
+ * importa el peso total.
+ */
+export function calcularSobrecargoCarrito(items: ItemParaSobrecargo[]): ClasificacionEnvio {
+  const pesoTotalKg = Number(
+    items.reduce((sum, item) => sum + (item.pesoKg || 0) * item.cantidad, 0).toFixed(2),
+  );
+
+  if (pesoTotalKg <= PESO_INCLUIDO_KG) {
+    return estandar();
+  }
+  if (pesoTotalKg > PESO_MAXIMO_KG) {
+    return alerta(mensajeAlertaCarrito(pesoTotalKg));
+  }
+
+  const monto = calcularExtraClp(pesoTotalKg);
+  return { resultado: "extra_automatico", extraClp: monto, mensaje: mensajeExtraCarrito(pesoTotalKg, monto) };
 }

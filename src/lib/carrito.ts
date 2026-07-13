@@ -7,7 +7,10 @@ export interface ItemCotizacion {
   partNumber: string;
   maker?: string;
   nombre?: string;
+  /** Precio del repuesto solo, sin sobrecargo por peso (se calcula a nivel de carrito). */
   precioRepuestoClp: number;
+  /** 0 = sin dato. */
+  pesoKg: number;
   cantidad: number;
 }
 

@@ -111,6 +111,49 @@
   color: var(--rojo);
 }
 
+/* Envío: alerta por peso acumulado (bloquea el pago) */
+.envioAlertaBox {
+  margin: 0 24px 18px;
+  padding: 20px;
+  background: rgba(146, 64, 14, 0.1);
+  border: 1px solid #92400e;
+}
+.envioAlertaTitle {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #fbbf24;
+  margin-bottom: 8px;
+}
+.envioAlertaText {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--texto-claro);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.envioAlertaBtn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.envioAlertaBtn:hover {
+  background: #fbbf24;
+  color: var(--negro);
+}
+
 /* Formulario */
 .form {
   padding: 24px;

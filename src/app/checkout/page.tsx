@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { CARRITO_STORAGE_KEY, type CarritoStorage } from "@/lib/carrito";
 import { METODO_ENVIO_LABELS } from "@/lib/metodoEnvio";
 import { validarRut } from "@/lib/rut";
+import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
 import styles from "./checkout.module.css";
 
 function fmt(n: number): string {
@@ -92,7 +93,7 @@ export default function CheckoutPage() {
   }
 
   async function pagarCon(metodo: "mercadopago" | "webpay" | "flow") {
-    if (!carrito) return;
+    if (!carrito || calcularSobrecargoCarrito(carrito.items).resultado === "alerta_whatsapp") return;
     setProcesando(true);
     setError(null);
 
@@ -186,7 +187,11 @@ export default function CheckoutPage() {
     (sum, item) => sum + item.precioRepuestoClp * item.cantidad,
     0,
   );
-  const total = subtotalRepuestos + carrito.costoLogisticaClp;
+  const pesoTotalKg = carrito.items.reduce((sum, item) => sum + item.pesoKg * item.cantidad, 0);
+  const clasificacionCarrito = calcularSobrecargoCarrito(carrito.items);
+  const sobrecargoClp = clasificacionCarrito.extraClp;
+  const bloqueadoPorPeso = clasificacionCarrito.resultado === "alerta_whatsapp";
+  const total = subtotalRepuestos + sobrecargoClp + carrito.costoLogisticaClp;
 
   return (
     <>
@@ -218,9 +223,19 @@ export default function CheckoutPage() {
           ))}
           <div className={styles.summaryTotals}>
             <div className={styles.summaryTotalRow}>
+              <span>Peso total</span>
+              <span>{pesoTotalKg ? `${pesoTotalKg} kg` : "Sin dato"}</span>
+            </div>
+            <div className={styles.summaryTotalRow}>
               <span>Subtotal repuestos</span>
               <span>${fmt(subtotalRepuestos)} CLP</span>
             </div>
+            {sobrecargoClp > 0 && (
+              <div className={styles.summaryTotalRow}>
+                <span>Sobrecargo por peso</span>
+                <span>${fmt(sobrecargoClp)} CLP</span>
+              </div>
+            )}
             <div className={styles.summaryTotalRow}>
               <span>Costo de logística (único)</span>
               <span>${fmt(carrito.costoLogisticaClp)} CLP</span>
@@ -232,7 +247,25 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {paso === "form" && (
+        {bloqueadoPorPeso && (
+          <div className={styles.envioAlertaBox}>
+            <p className={styles.envioAlertaTitle}>⚠️ Envío a cotizar</p>
+            <p className={styles.envioAlertaText}>{clasificacionCarrito.mensaje}</p>
+            <a
+              className={styles.envioAlertaBtn}
+              href={`https://wa.me/56954156358?text=${encodeURIComponent(
+                `Hola, quiero cotizar el envío de mi pedido (peso total ~${pesoTotalKg} kg): ` +
+                  carrito.items.map((item) => `${item.partNumber} ×${item.cantidad}`).join(", "),
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Confirmar por WhatsApp
+            </a>
+          </div>
+        )}
+
+        {!bloqueadoPorPeso && paso === "form" && (
           <>
             <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
               Datos de envío
@@ -372,7 +405,7 @@ export default function CheckoutPage() {
           </>
         )}
 
-        {paso === "pago" && (
+        {!bloqueadoPorPeso && paso === "pago" && (
           <>
             <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
               Elige cómo pagar

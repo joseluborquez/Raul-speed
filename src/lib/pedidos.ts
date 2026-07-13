@@ -10,12 +10,17 @@ export interface ItemPedido {
   maker?: string;
   nombre?: string;
   precioRepuestoClp: number;
+  /** 0 = sin dato. */
+  pesoKg?: number;
   cantidad: number;
 }
 
 export interface CrearPedidoInput {
   items: ItemPedido[];
   subtotalRepuestosClp: number;
+  /** Sobrecargo por envío calculado sobre el peso acumulado del pedido. */
+  sobrecargoPesoClp: number;
+  pesoTotalKg: number;
   costoLogisticaClp: number;
   totalClp: number;
   nombreCompleto: string;
@@ -47,6 +52,8 @@ export async function crearPedido(input: CrearPedidoInput): Promise<string> {
     .insert({
       items: input.items,
       subtotal_repuestos_clp: input.subtotalRepuestosClp,
+      sobrecargo_peso_clp: input.sobrecargoPesoClp,
+      peso_total_kg: input.pesoTotalKg,
       costo_logistica_clp: input.costoLogisticaClp,
       total_clp: input.totalClp,
       nombre_completo: input.nombreCompleto,

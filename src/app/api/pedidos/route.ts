@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cotizar } from "@/lib/cotizar";
 import { crearPedido, type ItemPedido, type MetodoEnvio } from "@/lib/pedidos";
 import { getSettings } from "@/lib/settings";
+import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
 import { limpiarRut, validarRut } from "@/lib/rut";
 import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
       maker: resultado.maker,
       nombre: resultado.nombre,
       precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+      pesoKg: resultado.pesoKg ?? 0,
       cantidad,
     });
   }
@@ -112,17 +114,38 @@ export async function POST(request: Request) {
 
   // El subtotal se recalcula desde los ítems y el costo de logística se
   // vuelve a leer de settings — nunca se confía en el total que mande el navegador.
+  // El sobrecargo por peso también se recalcula acá, sobre el peso
+  // ACUMULADO de los ítems (ya re-cotizados server-side, nunca el peso que
+  // mandó el navegador) — no sobre la suma de sobrecargos individuales.
   const subtotalRepuestosClp = items.reduce(
     (sum, item) => sum + Number(item.precioRepuestoClp || 0) * item.cantidad,
     0,
   );
+  const pesoTotalKg = items.reduce((sum, item) => sum + (item.pesoKg || 0) * item.cantidad, 0);
+  const clasificacionCarrito = calcularSobrecargoCarrito(
+    items.map((item) => ({ pesoKg: item.pesoKg ?? 0, cantidad: item.cantidad })),
+  );
+  if (clasificacionCarrito.resultado === "alerta_whatsapp") {
+    return NextResponse.json(
+      {
+        error:
+          "El peso total del pedido supera el máximo para pago automático. " +
+          "Contáctanos por WhatsApp para cotizar el envío antes de pagar.",
+      },
+      { status: 409 },
+    );
+  }
+  const sobrecargoPesoClp = clasificacionCarrito.extraClp;
+
   const { costoLogisticaClp } = await getSettings();
-  const totalClp = subtotalRepuestosClp + costoLogisticaClp;
+  const totalClp = subtotalRepuestosClp + sobrecargoPesoClp + costoLogisticaClp;
 
   try {
     const pedidoId = await crearPedido({
       items,
       subtotalRepuestosClp,
+      sobrecargoPesoClp,
+      pesoTotalKg,
       costoLogisticaClp,
       totalClp,
       nombreCompleto: String(body.nombreCompleto).trim(),
