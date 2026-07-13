@@ -72,7 +72,14 @@ export default function Home() {
     } else if (data.estado === "no_encontrado") {
       setError({ title: "Repuesto no encontrado", msg: data.mensaje ?? "" });
     } else {
-      setError({ title: "Error en la búsqueda", msg: data.mensaje ?? "Intenta nuevamente." });
+      // No se muestra data.mensaje: puede traer el error técnico crudo del
+      // proveedor de precios (ej. "Impex: contact with manager"), que no
+      // tiene sentido para el cliente. El mensaje real queda igual visible
+      // en el panel admin para diagnosticar.
+      setError({
+        title: "No pudimos cotizar en este momento",
+        msg: "Tuvimos un problema técnico al consultar el precio. Intenta nuevamente en unos minutos o escríbenos por WhatsApp al +56 9 5415 6358 si el problema persiste.",
+      });
     }
   }
 

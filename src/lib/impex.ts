@@ -81,10 +81,27 @@ export async function buscarImpex(partNumber: string): Promise<ResultadoPrecioPr
     );
   }
 
+  // Si una variante (ej. sin el guión que puso el cliente) devuelve un
+  // error de Impex, no hay que rendirse ahí: puede que la otra variante
+  // (con el guión en la posición correcta) sí encuentre la pieza. Solo se
+  // propaga un error si TODAS las variantes fallaron con error — si
+  // alguna respondió limpio (encontrada o no), esa respuesta manda.
   let resultado: ResultadoPrecioProveedor | null = null;
+  let huboRespuestaLimpia = false;
+  let ultimoError: Error | null = null;
+
   for (const variante of normalizar(clave)) {
-    resultado = await impexApiFetch(variante);
-    if (resultado) break;
+    try {
+      resultado = await impexApiFetch(variante);
+      huboRespuestaLimpia = true;
+      if (resultado) break;
+    } catch (exc) {
+      ultimoError = exc instanceof Error ? exc : new Error(String(exc));
+    }
+  }
+
+  if (!resultado && !huboRespuestaLimpia && ultimoError) {
+    throw ultimoError;
   }
 
   await setCache(PROVIDER, clave, resultado);
