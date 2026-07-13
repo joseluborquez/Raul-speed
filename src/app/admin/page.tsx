@@ -333,7 +333,7 @@ export default function AdminPage() {
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
           <div className={styles.spinner} />
-          <span>Consultando Yumbo Japan…</span>
+          <span>Consultando Impex Japan…</span>
         </div>
 
         {error && (
@@ -398,7 +398,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className={styles.detailRow}>
-                <span className={styles.key}>Peso (Yumbo)</span>
+                <span className={styles.key}>Peso (Impex)</span>
                 <span className={styles.value}>
                   {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato (posible sobrecargo)"}
                 </span>

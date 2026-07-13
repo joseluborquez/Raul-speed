@@ -1,7 +1,7 @@
 // Configuración principal — leer valores sensibles desde variables de entorno.
 // Ver .env.example para las claves requeridas.
 
-export const YUMBO_API_KEY = process.env.YUMBO_API_KEY ?? "";
+export const IMPEX_API_KEY = process.env.IMPEX_API_KEY ?? "";
 
 // Fórmula de negocio: precio_JPY × tipo_cambio_CLP × mult_1 × mult_2
 export const FORMULA = {

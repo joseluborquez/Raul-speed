@@ -1,7 +1,7 @@
 // Sobrecargo por envío — tabla de reglas fija (peso + nombre + precio).
 // Reemplaza al flujo anterior de cotización en vivo vía la API de flete DHL
 // (src/lib/impexEnvio.ts, retirado): acá no se llama a ningún proveedor,
-// todo se resuelve con los datos que ya trae Yumbo.
+// todo se resuelve con los datos que ya trae el proveedor de precios.
 //
 // Por cada pieza se revisan los 5 pasos en orden; apenas uno se cumple, se
 // aplica su resultado y no se siguen evaluando los siguientes.
@@ -89,7 +89,7 @@ function extraAutomatico(pesoKg: number): ClasificacionEnvio {
 
 export interface DatosClasificacion {
   nombre: string;
-  /** 0 = sin peso registrado en Yumbo. */
+  /** 0 = sin peso registrado por el proveedor. */
   pesoKg: number;
   precioRepuestoClp: number;
 }

@@ -33,9 +33,10 @@ const CAMPOS_TEXTO_REQUERIDOS = [
 
 export async function POST(request: Request) {
   // Este endpoint puede re-cotizar hasta MAX_ITEMS_POR_PEDIDO partNumbers
-  // distintos contra Yumbo en una sola llamada — sin límite, un carrito
-  // armado a propósito con ítems inválidos podía golpear la API de Yumbo
-  // muchas más veces que /api/cotizar sin pasar por su rate limit.
+  // distintos contra el proveedor de precios en una sola llamada — sin
+  // límite, un carrito armado a propósito con ítems inválidos podía
+  // golpear esa API muchas más veces que /api/cotizar sin pasar por su
+  // rate limit.
   const ip = obtenerIp(request);
   if (rateLimitExcedido(`pedidos:${ip}`, 5, 60_000)) {
     return NextResponse.json(
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   // El precio nunca se toma del navegador: cada partNumber se vuelve a
-  // cotizar contra Yumbo acá mismo. De lo contrario, cualquiera podría
+  // cotizar contra el proveedor de precios acá mismo. De lo contrario, cualquiera podría
   // editar el precioRepuestoClp que manda el cliente y pagar menos de lo
   // real — el navegador solo puede decidir *qué* partNumber y *cuántas*
   // unidades, nunca el precio.

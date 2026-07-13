@@ -1,9 +1,9 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
+import { buscarImpex } from "./impex";
 import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
-import { buscarYumbo } from "./yumbo";
 
 export interface ResultadoCotizacion {
   partNumber: string;
@@ -19,7 +19,7 @@ export interface ResultadoCotizacion {
   precioClpFinal?: number;
   fuente?: string;
   esGenuino?: boolean;
-  /** Peso en kg reportado por Yumbo. 0 = sin dato (posible pieza voluminosa). */
+  /** Peso en kg reportado por el proveedor. 0 = sin dato (posible pieza voluminosa). */
   pesoKg?: number;
   /** Clasificación de envío según la tabla de reglas (ver sobrecargoEnvio.ts). */
   envioResultado?: ResultadoEnvio;
@@ -60,10 +60,10 @@ export async function obtenerTipoCambioActivo(
 export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
 
-  // 1. Obtener precio JPY desde Yumbo Japan.
-  let resultadoYumbo;
+  // 1. Obtener precio JPY desde Impex Japan.
+  let resultadoImpex;
   try {
-    resultadoYumbo = await buscarYumbo(partNumber);
+    resultadoImpex = await buscarImpex(partNumber);
   } catch (exc) {
     return {
       partNumber,
@@ -73,7 +73,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  if (resultadoYumbo === null) {
+  if (resultadoImpex === null) {
     return {
       partNumber,
       estado: "no_encontrado",
@@ -82,7 +82,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  const { precioJpy, fuente } = resultadoYumbo;
+  const { precioJpy, fuente } = resultadoImpex;
 
   // 2. Obtener tipo de cambio JPY → CLP.
   // Si el admin fijó una tasa manual (global, en Supabase), se usa para
@@ -110,8 +110,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   // 3. Aplicar fórmula de negocio y clasificar el envío (peso + nombre + precio).
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
   const clasificacion = clasificarEnvio({
-    nombre: resultadoYumbo.nombre,
-    pesoKg: resultadoYumbo.pesoKg,
+    nombre: resultadoImpex.nombre,
+    pesoKg: resultadoImpex.pesoKg,
     precioRepuestoClp,
   });
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
@@ -119,8 +119,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   return {
     partNumber,
     estado: "ok",
-    maker: resultadoYumbo.maker,
-    nombre: resultadoYumbo.nombre,
+    maker: resultadoImpex.maker,
+    nombre: resultadoImpex.nombre,
     precioJpy,
     tipoCambioClp: Number(tipoCambio.toFixed(6)),
     fuenteTipoCambio: fuenteTc,
@@ -128,8 +128,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     costoLogisticaClp,
     precioClpFinal,
     fuente,
-    esGenuino: resultadoYumbo.esGenuino,
-    pesoKg: resultadoYumbo.pesoKg,
+    esGenuino: resultadoImpex.esGenuino,
+    pesoKg: resultadoImpex.pesoKg,
     envioResultado: clasificacion.resultado,
     envioExtraClp: clasificacion.extraClp,
     envioMensaje: clasificacion.mensaje,
