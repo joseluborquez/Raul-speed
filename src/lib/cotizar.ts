@@ -1,6 +1,7 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
+import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
 import { buscarYumbo } from "./yumbo";
 
@@ -20,6 +21,11 @@ export interface ResultadoCotizacion {
   esGenuino?: boolean;
   /** Peso en kg reportado por Yumbo. 0 = sin dato (posible pieza voluminosa). */
   pesoKg?: number;
+  /** Clasificación de envío según la tabla de reglas (ver sobrecargoEnvio.ts). */
+  envioResultado?: ResultadoEnvio;
+  /** Monto en CLP ya incluido en precioClpFinal cuando envioResultado es "extra_automatico". */
+  envioExtraClp?: number;
+  envioMensaje?: string;
   fecha: string;
 }
 
@@ -101,9 +107,14 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  // 3. Aplicar fórmula de negocio y sumar el costo de logística.
+  // 3. Aplicar fórmula de negocio y clasificar el envío (peso + nombre + precio).
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
-  const precioClpFinal = precioRepuestoClp + costoLogisticaClp;
+  const clasificacion = clasificarEnvio({
+    nombre: resultadoYumbo.nombre,
+    pesoKg: resultadoYumbo.pesoKg,
+    precioRepuestoClp,
+  });
+  const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
 
   return {
     partNumber,
@@ -119,6 +130,9 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     fuente,
     esGenuino: resultadoYumbo.esGenuino,
     pesoKg: resultadoYumbo.pesoKg,
+    envioResultado: clasificacion.resultado,
+    envioExtraClp: clasificacion.extraClp,
+    envioMensaje: clasificacion.mensaje,
     fecha: hoyIso(),
   };
 }

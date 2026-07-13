@@ -488,67 +488,30 @@
   color: var(--texto-claro);
 }
 
-/* Sobrecargo por volumen: peso/tamaño manual */
-.volBox {
+/* Envío: alerta (cotizar por WhatsApp) */
+.envioAlertaBox {
   margin: 0 28px 20px;
   padding: 20px;
   background: rgba(146, 64, 14, 0.1);
   border: 1px solid #92400e;
 }
-.volBoxTitle {
+.envioAlertaTitle {
   font-size: 0.8rem;
   font-weight: 800;
   color: #fbbf24;
   margin-bottom: 8px;
 }
-.volBoxText {
+.envioAlertaText {
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--texto-claro);
   line-height: 1.5;
   margin-bottom: 16px;
 }
-.volBoxRow {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.volBoxField {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.volBoxField label {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--texto-muted);
-}
-.volBoxField input {
+.envioAlertaBtn {
+  display: block;
   width: 100%;
-  background: var(--negro-input);
-  border: 1px solid var(--borde);
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--blanco);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.volBoxField input:focus {
-  border-color: var(--rojo);
-}
-.volBoxError {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #f87171;
-  margin-bottom: 12px;
-}
-.volBoxBtn {
-  width: 100%;
+  box-sizing: border-box;
   background: transparent;
   color: #fbbf24;
   border: 1px solid #fbbf24;
@@ -558,22 +521,34 @@
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
-.volBoxBtn:hover {
+.envioAlertaBtn:hover {
   background: #fbbf24;
   color: var(--negro);
 }
-.volBoxBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+/* Envío: extra automático por peso */
+.envioExtraBox {
+  margin: 0 28px 20px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--borde);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--texto-claro);
+  line-height: 1.5;
 }
 
-@media (max-width: 520px) {
-  .volBoxRow {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* Envío: estándar */
+.envioEstandar {
+  margin: 0 28px 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--verde-texto);
 }
 
 /* Agregar al carrito de compras */

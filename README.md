@@ -16,9 +16,9 @@ Migrado desde una app Flask/Python a Next.js (App Router, TypeScript).
 - `src/lib/config.ts` — variables de entorno y multiplicadores de la fórmula.
 - `src/lib/calculator.ts` — tipo de cambio (Banco Central + fallback) y fórmula de precio.
 - `src/lib/yumbo.ts` — consulta a la API de Yumbo Japan (única fuente de precios).
-- `src/lib/impexEnvio.ts` — cálculo del costo de envío DHL vía la API de Impex Japan (endpoint separado, no requiere key).
+- `src/lib/sobrecargoEnvio.ts` — tabla de reglas del sobrecargo por envío (peso + nombre + precio, sin llamar a ninguna API de flete).
 - `src/lib/settings.ts` — lectura/escritura del costo de logística en Supabase.
-- `src/lib/cotizar.ts` — orquestación de la cotización completa (repuesto + logística).
+- `src/lib/cotizar.ts` — orquestación de la cotización completa (repuesto + logística + sobrecargo por envío).
 - `src/lib/supabase/client.ts` / `server.ts` — clientes Supabase (browser/servidor).
 
 ## Configuración

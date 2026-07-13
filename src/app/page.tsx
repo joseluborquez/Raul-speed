@@ -35,16 +35,6 @@ export default function Home() {
 
   const [verMasSobrecargo, setVerMasSobrecargo] = useState(false);
 
-  interface SobrecargoInfo {
-    envioDhlJpy: number;
-    envioDhlClp: number;
-    sobrecargoClp: number;
-  }
-  const [volForm, setVolForm] = useState({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
-  const [sobrecargo, setSobrecargo] = useState<SobrecargoInfo | null>(null);
-  const [sobrecargoCalculando, setSobrecargoCalculando] = useState(false);
-  const [sobrecargoError, setSobrecargoError] = useState<string | null>(null);
-
   async function buscar() {
     const part = inputRef.current?.value.trim().toUpperCase() ?? "";
     if (!part) {
@@ -56,9 +46,6 @@ export default function Home() {
     setResultado(null);
     setError(null);
     setCantidad(1);
-    setVolForm({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
-    setSobrecargo(null);
-    setSobrecargoError(null);
 
     let data: ResultadoCotizacion;
     try {
@@ -88,45 +75,9 @@ export default function Home() {
     }
   }
 
-  function actualizarVolCampo(campo: keyof typeof volForm, valor: string) {
-    setVolForm((prev) => ({ ...prev, [campo]: valor }));
-  }
-
-  async function calcularSobrecargo() {
-    const pesoKg = Number(volForm.pesoKg);
-    if (!Number.isFinite(pesoKg) || pesoKg <= 0) {
-      setSobrecargoError("Ingresa un peso válido en kg");
-      return;
-    }
-
-    setSobrecargoCalculando(true);
-    setSobrecargoError(null);
-    setSobrecargo(null);
-    try {
-      const res = await fetch("/api/cotizar/sobrecargo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pesoKg,
-          largoCm: volForm.largoCm ? Number(volForm.largoCm) : undefined,
-          anchoCm: volForm.anchoCm ? Number(volForm.anchoCm) : undefined,
-          altoCm: volForm.altoCm ? Number(volForm.altoCm) : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSobrecargoError(data.error || "No se pudo calcular el sobrecargo");
-      } else {
-        setSobrecargo(data);
-      }
-    } catch {
-      setSobrecargoError("Error de conexión");
-    }
-    setSobrecargoCalculando(false);
-  }
-
   function agregarAlCarrito() {
     if (!resultado || resultado.estado !== "ok") return;
+    if (resultado.envioResultado === "alerta_whatsapp") return;
 
     setItems((prev) => [
       ...prev,
@@ -135,16 +86,13 @@ export default function Home() {
         partNumber: resultado.partNumber,
         maker: resultado.maker,
         nombre: resultado.nombre,
-        precioRepuestoClp: (resultado.precioRepuestoClp ?? 0) + (sobrecargo?.sobrecargoClp ?? 0),
+        precioRepuestoClp: (resultado.precioRepuestoClp ?? 0) + (resultado.envioExtraClp ?? 0),
         cantidad,
       },
     ]);
 
     setResultado(null);
     setCantidad(1);
-    setVolForm({ pesoKg: "", largoCm: "", anchoCm: "", altoCm: "" });
-    setSobrecargo(null);
-    setSobrecargoError(null);
     if (inputRef.current) {
       inputRef.current.value = "";
       inputRef.current.focus();
@@ -310,9 +258,7 @@ export default function Home() {
             <div className={styles.priceHero}>
               <div className={styles.priceLabel}>Precio en Peso Chileno</div>
               <div>
-                <span className={styles.priceAmount}>
-                  {fmt((resultado.precioClpFinal ?? 0) + (sobrecargo?.sobrecargoClp ?? 0))}
-                </span>
+                <span className={styles.priceAmount}>{fmt(resultado.precioClpFinal ?? 0)}</span>
                 <span className={styles.priceCurrency}>CLP · IVA incluido</span>
               </div>
             </div>
@@ -327,10 +273,10 @@ export default function Home() {
                   {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato"}
                 </span>
               </div>
-              {sobrecargo && (
+              {resultado.envioResultado === "extra_automatico" && (
                 <div className={styles.infoRow}>
-                  <span className={styles.key}>Sobrecargo por volumen (envío)</span>
-                  <span className={styles.value}>${fmt(sobrecargo.sobrecargoClp)} CLP</span>
+                  <span className={styles.key}>Extra por peso</span>
+                  <span className={styles.value}>${fmt(resultado.envioExtraClp ?? 0)} CLP</span>
                 </div>
               )}
               <div className={styles.infoRow}>
@@ -339,98 +285,61 @@ export default function Home() {
               </div>
             </div>
 
-            {!resultado.pesoKg && (
-              <div className={styles.volBox}>
-                <p className={styles.volBoxTitle}>
-                  ⚠️ Esta pieza no tiene peso/tamaño estándar en Yumbo
-                </p>
-                <p className={styles.volBoxText}>
-                  Suele tratarse de una pieza grande o voluminosa (carenados, estanques,
-                  basculantes, etc). Ingresa el peso y tamaño real del paquete para calcular
-                  el sobrecargo por envío.
-                </p>
-                <div className={styles.volBoxRow}>
-                  <div className={styles.volBoxField}>
-                    <label htmlFor="volPeso">Peso (kg) *</label>
-                    <input
-                      id="volPeso"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={volForm.pesoKg}
-                      onChange={(e) => actualizarVolCampo("pesoKg", e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.volBoxField}>
-                    <label htmlFor="volLargo">Largo (cm)</label>
-                    <input
-                      id="volLargo"
-                      type="number"
-                      min="0"
-                      value={volForm.largoCm}
-                      onChange={(e) => actualizarVolCampo("largoCm", e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.volBoxField}>
-                    <label htmlFor="volAncho">Ancho (cm)</label>
-                    <input
-                      id="volAncho"
-                      type="number"
-                      min="0"
-                      value={volForm.anchoCm}
-                      onChange={(e) => actualizarVolCampo("anchoCm", e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.volBoxField}>
-                    <label htmlFor="volAlto">Alto (cm)</label>
-                    <input
-                      id="volAlto"
-                      type="number"
-                      min="0"
-                      value={volForm.altoCm}
-                      onChange={(e) => actualizarVolCampo("altoCm", e.target.value)}
-                    />
-                  </div>
-                </div>
-                {sobrecargoError && <p className={styles.volBoxError}>{sobrecargoError}</p>}
-                <button
-                  type="button"
-                  className={styles.volBoxBtn}
-                  disabled={sobrecargoCalculando}
-                  onClick={calcularSobrecargo}
+            {resultado.envioResultado === "estandar" && (
+              <p className={styles.envioEstandar}>{resultado.envioMensaje}</p>
+            )}
+
+            {resultado.envioResultado === "extra_automatico" && (
+              <div className={styles.envioExtraBox}>{resultado.envioMensaje}</div>
+            )}
+
+            {resultado.envioResultado === "alerta_whatsapp" && (
+              <div className={styles.envioAlertaBox}>
+                <p className={styles.envioAlertaTitle}>⚠️ Envío a cotizar</p>
+                <p className={styles.envioAlertaText}>{resultado.envioMensaje}</p>
+                <a
+                  className={styles.envioAlertaBtn}
+                  href={`https://wa.me/56954156358?text=${encodeURIComponent(
+                    `Hola, quiero cotizar el envío de la pieza ${resultado.partNumber}` +
+                      `${resultado.nombre ? ` (${resultado.nombre})` : ""}.`,
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  {sobrecargoCalculando ? "Calculando…" : "Calcular sobrecargo por envío"}
-                </button>
+                  Confirmar por WhatsApp
+                </a>
               </div>
             )}
 
-            <div className={styles.addRow}>
-              <div className={styles.qtyRow}>
-                <span className={styles.qtyLabel}>Cantidad</span>
-                <div className={styles.qtyControls}>
-                  <button
-                    type="button"
-                    className={styles.qtyBtn}
-                    onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                    aria-label="Disminuir cantidad"
-                  >
-                    −
-                  </button>
-                  <span className={styles.qtyValue}>{cantidad}</span>
-                  <button
-                    type="button"
-                    className={styles.qtyBtn}
-                    onClick={() => setCantidad((c) => c + 1)}
-                    aria-label="Aumentar cantidad"
-                  >
-                    +
-                  </button>
+            {resultado.envioResultado !== "alerta_whatsapp" && (
+              <div className={styles.addRow}>
+                <div className={styles.qtyRow}>
+                  <span className={styles.qtyLabel}>Cantidad</span>
+                  <div className={styles.qtyControls}>
+                    <button
+                      type="button"
+                      className={styles.qtyBtn}
+                      onClick={() => setCantidad((c) => Math.max(1, c - 1))}
+                      aria-label="Disminuir cantidad"
+                    >
+                      −
+                    </button>
+                    <span className={styles.qtyValue}>{cantidad}</span>
+                    <button
+                      type="button"
+                      className={styles.qtyBtn}
+                      onClick={() => setCantidad((c) => c + 1)}
+                      aria-label="Aumentar cantidad"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
+                <button className={styles.addBtn} onClick={agregarAlCarrito}>
+                  + Agregar al carrito de compras
+                </button>
               </div>
-              <button className={styles.addBtn} onClick={agregarAlCarrito}>
-                + Agregar al carrito de compras
-              </button>
-            </div>
+            )}
           </div>
         )}
 
