@@ -1,6 +1,6 @@
 # Cotizador OEM — Raulspeed
 
-Cotizador de repuestos OEM japoneses. Consulta el precio en Impex Japan, lo convierte de JPY a CLP usando el tipo de cambio del Banco Central de Chile (con fallback a exchangerate-api) y aplica la fórmula de negocio.
+Cotizador de repuestos OEM japoneses. Consulta el precio en Yumbo Japan, lo convierte de JPY a CLP usando el tipo de cambio del Banco Central de Chile (con fallback a exchangerate-api) y aplica la fórmula de negocio.
 
 Migrado desde una app Flask/Python a Next.js (App Router, TypeScript).
 
@@ -15,7 +15,7 @@ Migrado desde una app Flask/Python a Next.js (App Router, TypeScript).
 - `src/app/api/settings/route.ts` — GET público / PUT protegido del costo de logística.
 - `src/lib/config.ts` — variables de entorno y multiplicadores de la fórmula.
 - `src/lib/calculator.ts` — tipo de cambio (Banco Central + fallback) y fórmula de precio.
-- `src/lib/impex.ts` — consulta a la API de Impex Japan (única fuente de precios).
+- `src/lib/yumbo.ts` — consulta a la API de Yumbo Japan (única fuente de precios).
 - `src/lib/priceCache.ts` / `priceCircuitBreaker.ts` — caché y circuit breaker genéricos por proveedor de precios (evitan repetir el agotamiento de cuota que ya pasó con Impex y con Yumbo).
 - `src/lib/sobrecargoEnvio.ts` — tabla de reglas del sobrecargo por envío (peso + nombre + precio, sin llamar a ninguna API de flete).
 - `src/lib/settings.ts` — lectura/escritura del costo de logística en Supabase.
@@ -30,7 +30,7 @@ Copia `.env.example` a `.env.local` y completa las credenciales:
 cp .env.example .env.local
 ```
 
-- `IMPEX_API_KEY` — clave de la API de Impex Japan (obtener en https://en.impex-jp.com/user/profile/api-keys.html).
+- `YUMBO_API_KEY` — clave de la API de Yumbo Japan (obtener en https://yumbo-jp.com/user/user/profile.html).
 - `BCENTRAL_USER` / `BCENTRAL_PASS` — credenciales del Banco Central de Chile.
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — proyecto Supabase (tabla `settings` + Auth del admin).
 

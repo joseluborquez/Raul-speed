@@ -1,45 +1,40 @@
-// Cotizador OEM — fuente: Impex Japan API.
+// Cotizador OEM — fuente: Yumbo Japan API.
 //
-// Segunda vuelta con este proveedor: ya se usó antes y se retiró porque la
-// cuenta empezó a devolver {"error":"contact with manager"} para todo (ver
-// commit 7212e05), lo que llevó a migrar a Yumbo. Yumbo después agotó su
-// propia cuota, así que esta vez Impex queda protegido por la misma
-// infraestructura de resiliencia que se construyó para Yumbo: caché
-// (priceCache.ts), circuit breaker (priceCircuitBreaker.ts) y un límite
-// propio de llamadas por minuto (rateLimit.ts), para no golpear la API con
-// más frecuencia de la necesaria.
+// Tercera vuelta con este proveedor: se retiró la primera vez porque la
+// cuenta agotó su cuota, se probó con Impex como reemplazo y esa cuenta
+// empezó a bloquear las consultas que salían desde la red de Vercel
+// (devolvía {"error":"contact with manager"} solo para tráfico de
+// datacenter, confirmado en vivo — mismo N/P, mismo minuto: falla desde
+// Vercel, funciona desde una IP normal). Se vuelve a Yumbo mientras se
+// resuelve eso con Impex, protegido por la misma infraestructura de
+// resiliencia genérica por proveedor: caché (priceCache.ts), circuit
+// breaker (priceCircuitBreaker.ts) y un límite propio de llamadas por
+// minuto (rateLimit.ts).
 //
-// Endpoint: GET https://www.impex-jp.com/api/parts/search.html
-// Auth:     query param key=API_KEY
-// Búsqueda: query param part_no=NUMERO_PARTE
+// Endpoint: GET https://yumbo-jp.com/api/v1/parts/search.json
+// Doc:      https://yumbo-jp.com/en/api.html#/New%20spare%20parts/get_api_v1_parts_search_json
+// Auth:     header X-Api-Key (se obtiene en https://yumbo-jp.com/user/user/profile.html)
 
-import { IMPEX_API_KEY } from "./config";
+import { YUMBO_API_KEY } from "./config";
 import { getCache, setCache, type ResultadoPrecioProveedor } from "./priceCache";
 import { isPaused, recordFailure, recordSuccess } from "./priceCircuitBreaker";
 import { rateLimitExcedido } from "./rateLimit";
 
-const PROVIDER = "impex";
-const IMPEX_API_URL = "https://www.impex-jp.com/api/parts/search.html";
+const PROVIDER = "yumbo";
+const YUMBO_API_URL = "https://yumbo-jp.com/api/v1/parts/search.json";
 
 // Límite propio, best-effort en memoria (ver rateLimit.ts) — no hay un
-// número documentado de Impex, así que se parte con algo conservador.
+// número documentado de Yumbo, así que se parte con algo conservador.
 const LIMITE_LLAMADAS_POR_MINUTO = 20;
 
-const HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  "Accept-Language": "en-US,en;q=0.9",
-  accept: "application/json",
-};
-
-interface ImpexParte {
-  mark?: string;
+interface YumboParte {
+  markName: string;
+  partNo: string;
   name?: string;
-  name_eng?: string;
+  nameEn?: string;
   weight?: number;
-  price_yen: number;
-  is_discontinued: boolean;
+  priceYen: number;
+  isDiscontinued: boolean;
 }
 
 /**
@@ -71,10 +66,10 @@ function normalizar(partNumber: string): string[] {
 }
 
 /**
- * Busca precio OEM en Impex Japan vía API oficial.
+ * Busca precio OEM en Yumbo Japan vía API oficial.
  */
-export async function buscarImpex(partNumber: string): Promise<ResultadoPrecioProveedor | null> {
-  if (!IMPEX_API_KEY) return null;
+export async function buscarYumbo(partNumber: string): Promise<ResultadoPrecioProveedor | null> {
+  if (!YUMBO_API_KEY) return null;
 
   const clave = partNumber.trim().toUpperCase();
 
@@ -93,7 +88,7 @@ export async function buscarImpex(partNumber: string): Promise<ResultadoPrecioPr
   }
 
   // Si una variante (ej. sin el guión que puso el cliente) devuelve un
-  // error de Impex, no hay que rendirse ahí: puede que la otra variante
+  // error de Yumbo, no hay que rendirse ahí: puede que la otra variante
   // (con el guión en la posición correcta) sí encuentre la pieza. Solo se
   // propaga un error si TODAS las variantes fallaron con error — si
   // alguna respondió limpio (encontrada o no), esa respuesta manda.
@@ -103,7 +98,7 @@ export async function buscarImpex(partNumber: string): Promise<ResultadoPrecioPr
 
   for (const variante of normalizar(clave)) {
     try {
-      resultado = await impexApiFetch(variante);
+      resultado = await yumboApiFetch(variante);
       huboRespuestaLimpia = true;
       if (resultado) break;
     } catch (exc) {
@@ -119,23 +114,23 @@ export async function buscarImpex(partNumber: string): Promise<ResultadoPrecioPr
   return resultado;
 }
 
-async function impexApiFetch(partNumber: string): Promise<ResultadoPrecioProveedor | null> {
-  if (rateLimitExcedido("impex-global", LIMITE_LLAMADAS_POR_MINUTO, 60_000)) {
-    throw new Error("Límite propio de consultas a Impex alcanzado. Reintenta en un minuto.");
+async function yumboApiFetch(partNumber: string): Promise<ResultadoPrecioProveedor | null> {
+  if (rateLimitExcedido("yumbo-global", LIMITE_LLAMADAS_POR_MINUTO, 60_000)) {
+    throw new Error("Límite propio de consultas a Yumbo alcanzado. Reintenta en un minuto.");
   }
 
   const params = new URLSearchParams({
-    key: IMPEX_API_KEY,
-    part_no: partNumber,
-    original_only: "0",
-    price_factor: "1",
-    price_increase: "0",
+    partNo: partNumber,
+    ignoreAlternate: "true",
   });
 
   let resp: Response;
   try {
-    resp = await fetch(`${IMPEX_API_URL}?${params.toString()}`, {
-      headers: HEADERS,
+    resp = await fetch(`${YUMBO_API_URL}?${params.toString()}`, {
+      headers: {
+        "X-Api-Key": YUMBO_API_KEY,
+        accept: "application/json",
+      },
       signal: AbortSignal.timeout(20_000),
     });
   } catch (exc) {
@@ -145,34 +140,29 @@ async function impexApiFetch(partNumber: string): Promise<ResultadoPrecioProveed
   }
 
   if (!resp.ok) {
-    await recordFailure(PROVIDER, resp.status, `Impex respondió con estado ${resp.status}`);
-    throw new Error(`Impex respondió con estado ${resp.status}`);
+    await recordFailure(PROVIDER, resp.status, `Yumbo respondió con estado ${resp.status}`);
+    throw new Error(`Yumbo respondió con estado ${resp.status}`);
   }
 
-  const data = await resp.json();
-
-  // Impex puede responder 200 con un {"error": "..."} en vez de resultados
-  // (ej. clave suspendida, cuenta marcada para revisión) — eso no es lo
-  // mismo que "no encontrado" y no debe tratarse como tal.
-  if (data?.error) {
-    await recordFailure(PROVIDER, resp.status, `Impex: ${data.error}`);
-    throw new Error(`Impex: ${data.error}`);
+  const data: YumboParte[] = await resp.json();
+  if (!Array.isArray(data)) {
+    await recordFailure(PROVIDER, resp.status, "Yumbo: respuesta inesperada");
+    throw new Error("Yumbo: respuesta inesperada");
   }
 
   await recordSuccess(PROVIDER);
 
-  const partes: ImpexParte[] = data?.original_parts ?? [];
-  for (const parte of partes) {
-    if (parte.is_discontinued) continue;
+  for (const parte of data) {
+    if (parte.isDiscontinued) continue;
 
-    const precioJpy = parte.price_yen;
+    const precioJpy = parte.priceYen;
     if (!precioJpy || precioJpy <= 0) continue;
 
     return {
       precioJpy: Math.trunc(precioJpy),
-      fuente: "impex-jp.com",
-      maker: parte.mark ?? "",
-      nombre: parte.name_eng || parte.name || "",
+      fuente: "yumbo-jp.com",
+      maker: parte.markName ?? "",
+      nombre: parte.nameEn || parte.name || "",
       esGenuino: true,
       pesoKg: Number(parte.weight) || 0,
     };
