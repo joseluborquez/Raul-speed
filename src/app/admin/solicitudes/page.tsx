@@ -69,6 +69,9 @@ export default function AdminSolicitudesPage() {
           >
             Solicitudes N° parte
           </Link>
+          <Link href="/admin/repuestos" className={styles.topbarNavLink}>
+            Repuestos
+          </Link>
         </nav>
         <div className={styles.topbarBadge}>Administrador</div>
         <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>

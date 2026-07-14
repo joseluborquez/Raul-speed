@@ -212,6 +212,9 @@ export default function AdminPage() {
           <Link href="/admin/solicitudes" className={styles.topbarNavLink}>
             Solicitudes N° parte
           </Link>
+          <Link href="/admin/repuestos" className={styles.topbarNavLink}>
+            Repuestos
+          </Link>
         </nav>
         <div className={styles.topbarBadge}>Administrador</div>
         <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>
@@ -398,7 +401,7 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className={styles.detailRow}>
-                <span className={styles.key}>Peso (Yumbo)</span>
+                <span className={styles.key}>Peso (efectivo)</span>
                 <span className={styles.value}>
                   {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato (posible sobrecargo)"}
                 </span>

@@ -556,6 +556,57 @@
   color: var(--rojo);
 }
 
+/* Catálogo de repuestos (peso manual) */
+.repuestoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.repuestoRow:last-child {
+  border-bottom: none;
+}
+.repuestoRowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.repuestoRowMeta {
+  font-size: var(--fs-2xs);
+  color: var(--texto-muted);
+  letter-spacing: 0.3px;
+}
+.pesoManualControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pesoManualInput {
+  width: 90px;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.pesoManualInput:focus {
+  border-color: var(--rojo);
+}
+.pesoManualMsg {
+  width: 100%;
+  font-size: var(--fs-3xs);
+  color: var(--texto-muted);
+}
+
 /* Error */
 .errorBox {
   display: none;

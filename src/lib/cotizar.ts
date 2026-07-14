@@ -1,6 +1,7 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
+import { getPesoManual, registrarCotizacion } from "./repuestosCatalogo";
 import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
 import { buscarYumbo } from "./yumbo";
@@ -19,7 +20,11 @@ export interface ResultadoCotizacion {
   precioClpFinal?: number;
   fuente?: string;
   esGenuino?: boolean;
-  /** Peso en kg reportado por el proveedor. 0 = sin dato (posible pieza voluminosa). */
+  /**
+   * Peso en kg efectivo: el cargado a mano por el admin en el catálogo
+   * de repuestos si existe, si no el que reporta el proveedor. 0 = sin
+   * dato de ningún lado (posible pieza voluminosa).
+   */
   pesoKg?: number;
   /** Clasificación de envío según la tabla de reglas (ver sobrecargoEnvio.ts). */
   envioResultado?: ResultadoEnvio;
@@ -84,6 +89,26 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
 
   const { precioJpy, fuente } = resultadoYumbo;
 
+  // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
+  // actualiza este N° de parte, y si el admin ya cargó un peso a mano
+  // para él, ese peso manda sobre el que trae el proveedor — ver
+  // repuestosCatalogo.ts. Nunca debe romper la cotización si Supabase
+  // falla acá.
+  let pesoEfectivo = resultadoYumbo.pesoKg;
+  try {
+    const pesoManual = await getPesoManual(partNumber);
+    if (pesoManual !== null) pesoEfectivo = pesoManual;
+
+    await registrarCotizacion({
+      partNumber,
+      maker: resultadoYumbo.maker,
+      nombre: resultadoYumbo.nombre,
+      pesoKgProveedor: resultadoYumbo.pesoKg,
+    });
+  } catch {
+    // sin catálogo esta vez, pero la cotización sigue con el peso del proveedor.
+  }
+
   // 2. Obtener tipo de cambio JPY → CLP.
   // Si el admin fijó una tasa manual (global, en Supabase), se usa para
   // todas las cotizaciones; si no, se consulta el Banco Central.
@@ -111,7 +136,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
   const clasificacion = clasificarEnvio({
     nombre: resultadoYumbo.nombre,
-    pesoKg: resultadoYumbo.pesoKg,
+    pesoKg: pesoEfectivo,
     precioRepuestoClp,
   });
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
@@ -129,7 +154,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     precioClpFinal,
     fuente,
     esGenuino: resultadoYumbo.esGenuino,
-    pesoKg: resultadoYumbo.pesoKg,
+    pesoKg: pesoEfectivo,
     envioResultado: clasificacion.resultado,
     envioExtraClp: clasificacion.extraClp,
     envioMensaje: clasificacion.mensaje,
