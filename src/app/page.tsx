@@ -95,7 +95,7 @@ function HelpBox({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
   return (
     <div className={styles.helpBox}>
       <div className={`${styles.envioCardTitle} ${styles.helpBoxTitle}`}>
-        <span className={styles.envioCardIcon}>❓</span> ¿No sabes tu número de parte?
+        ¿No sabes tu número de parte?
       </div>
       <p className={styles.envioCardText}>
         <button type="button" className={styles.helpBoxLink} onClick={onAbrirSolicitud}>
