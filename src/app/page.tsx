@@ -11,6 +11,103 @@ function fmt(n: number): string {
   return new Intl.NumberFormat("es-CL").format(n);
 }
 
+// Copy informativa, no ligada 1:1 a LISTA_A_PALABRAS (sobrecargoEnvio.ts):
+// son categorías en español para el cliente, no los términos en inglés que
+// se buscan en el nombre del repuesto que devuelve el proveedor.
+const CATEGORIAS_VOLUMINOSAS = [
+  "Carenados",
+  "Quillas",
+  "Tapas de carenado",
+  "Guardabarros",
+  "Estanque",
+  "Foco delantero",
+  "Escape",
+  "Radiador",
+  "Basculante",
+  "Llantas",
+  "Neumáticos",
+  "Chasis",
+  "Manubrio",
+  "Parabrisas",
+  "Asiento",
+  "Ductos de aire",
+  "Tapas laterales",
+];
+
+function EnvioEstandarCard() {
+  return (
+    <div className={styles.envioEstandarCard}>
+      <div className={styles.envioCardTitle}>
+        <span className={styles.envioCardIcon}>✓</span> Envío estándar incluido
+      </div>
+      <p className={styles.envioCardText}>
+        El precio mostrado es el valor final e incluye IVA y despacho estándar. No pagas nada
+        adicional por piezas de tamaño normal.
+      </p>
+      <p className={styles.envioCardBullet}>
+        Envío estándar: piezas de hasta 500 g — retenes, empaquetaduras, filtros, tensores,
+        pastillas, bujías y rodamientos, entre muchos otros — la gran mayoría de los repuestos.
+      </p>
+    </div>
+  );
+}
+
+function EnvioAlertaCard({ whatsappHref }: { whatsappHref: string }) {
+  return (
+    <div className={styles.envioAlertaCard}>
+      <div className={styles.envioCardTitle}>
+        <span className={styles.envioCardIcon}>📦</span> Piezas voluminosas: te confirmamos el
+        envío
+      </div>
+      <p className={styles.envioCardText}>
+        Algunas piezas grandes o de más de 500 g pueden llevar un pequeño ajuste en el despacho.
+        En la mayoría de los casos es un monto menor — escríbenos por WhatsApp y en minutos te
+        confirmamos el valor exacto para tu repuesto.
+      </p>
+      <p className={styles.envioAlertaAplica}>Aplica solo para:</p>
+      <ul className={styles.envioAlertaCriterios}>
+        <li>Piezas de más de 500 g de peso</li>
+        <li>Piezas voluminosas:</li>
+      </ul>
+      <div className={styles.envioTagList}>
+        {CATEGORIAS_VOLUMINOSAS.map((categoria) => (
+          <span key={categoria} className={styles.envioTag}>
+            {categoria}
+          </span>
+        ))}
+      </div>
+      <p className={styles.envioAlertaNota}>
+        La consulta toma solo un minuto — compras con el valor total confirmado, sin sorpresas.
+      </p>
+      <a
+        className={styles.envioAlertaBtn}
+        href={whatsappHref}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        💬 Confirmar mi envío por WhatsApp
+      </a>
+    </div>
+  );
+}
+
+function HelpBox({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
+  return (
+    <div className={styles.helpBox}>
+      <div className={styles.envioCardTitle}>
+        <span className={styles.envioCardIcon}>❓</span> ¿No sabes tu número de parte?
+      </div>
+      <p className={styles.envioCardText}>
+        <button type="button" className={styles.helpBoxLink} onClick={onAbrirSolicitud}>
+          Déjanos los datos de tu moto aquí
+        </button>{" "}
+        y lo buscamos por ti.
+      </p>
+      <p className={styles.helpBoxSub}>Te respondemos por WhatsApp</p>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -245,16 +342,9 @@ export default function Home() {
           </p>
         </div>
 
-        <div className={styles.helpBox}>
-          <p className={styles.helpBoxTitle}>¿No sabes tu número de parte?</p>
-          <p className={styles.helpBoxText}>
-            <button type="button" className={styles.helpBoxLink} onClick={abrirSolicitud}>
-              Déjanos los datos de tu moto aquí
-            </button>{" "}
-            y lo buscamos por ti.
-          </p>
-          <p className={styles.helpBoxSub}>Te respondemos por WhatsApp</p>
-        </div>
+        {!(resultado && resultado.estado === "ok") && (
+          <HelpBox onAbrirSolicitud={abrirSolicitud} />
+        )}
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
           <div className={styles.spinner} />
@@ -294,30 +384,19 @@ export default function Home() {
               </div>
             </div>
 
-            {resultado.envioResultado === "estandar" && (
-              <p className={styles.envioEstandar}>{resultado.envioMensaje}</p>
-            )}
+            {resultado.envioResultado === "estandar" && <EnvioEstandarCard />}
 
             {resultado.envioResultado === "extra_automatico" && (
               <div className={styles.envioExtraBox}>{resultado.envioMensaje}</div>
             )}
 
             {resultado.envioResultado === "alerta_whatsapp" && (
-              <div className={styles.envioAlertaBox}>
-                <p className={styles.envioAlertaTitle}>⚠️ Envío a cotizar</p>
-                <p className={styles.envioAlertaText}>{resultado.envioMensaje}</p>
-                <a
-                  className={styles.envioAlertaBtn}
-                  href={`https://wa.me/56954156358?text=${encodeURIComponent(
-                    `Hola, quiero cotizar el envío de la pieza ${resultado.partNumber}` +
-                      `${resultado.nombre ? ` (${resultado.nombre})` : ""}.`,
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Confirmar por WhatsApp
-                </a>
-              </div>
+              <EnvioAlertaCard
+                whatsappHref={`https://wa.me/56954156358?text=${encodeURIComponent(
+                  `Hola, quiero cotizar el envío de la pieza ${resultado.partNumber}` +
+                    `${resultado.nombre ? ` (${resultado.nombre})` : ""}.`,
+                )}`}
+              />
             )}
 
             {resultado.envioResultado !== "alerta_whatsapp" && (
@@ -351,6 +430,8 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {resultado && resultado.estado === "ok" && <HelpBox onAbrirSolicitud={abrirSolicitud} />}
 
         {items.length > 0 && (
           <div className={`${styles.cartCard} ${styles.visible}`}>
@@ -422,27 +503,21 @@ export default function Home() {
             </div>
 
             {bloqueadoPorPeso ? (
-              <div className={styles.envioAlertaBox}>
-                <p className={styles.envioAlertaTitle}>⚠️ Envío a cotizar</p>
-                <p className={styles.envioAlertaText}>{clasificacionCarrito.mensaje}</p>
-                <a
-                  className={styles.envioAlertaBtn}
-                  href={`https://wa.me/56954156358?text=${encodeURIComponent(
-                    `Hola, quiero cotizar el envío de mi pedido (peso total ~${pesoTotalCarritoKg} kg): ` +
-                      items.map((item) => `${item.partNumber} ×${item.cantidad}`).join(", "),
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Confirmar por WhatsApp
-                </a>
-              </div>
+              <EnvioAlertaCard
+                whatsappHref={`https://wa.me/56954156358?text=${encodeURIComponent(
+                  `Hola, quiero cotizar el envío de mi pedido (peso total ~${pesoTotalCarritoKg} kg): ` +
+                    items.map((item) => `${item.partNumber} ×${item.cantidad}`).join(", "),
+                )}`}
+              />
             ) : (
-              <div className={styles.addRow}>
-                <button className={styles.addBtn} onClick={procederAlPago}>
-                  Proceder al pago →
-                </button>
-              </div>
+              <>
+                {clasificacionCarrito.resultado === "estandar" && <EnvioEstandarCard />}
+                <div className={styles.addRow}>
+                  <button className={styles.addBtn} onClick={procederAlPago}>
+                    Proceder al pago →
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}

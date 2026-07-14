@@ -18,6 +18,26 @@
   --texto-muted: #666666;
   --verde: #166534;
   --verde-texto: #86efac;
+
+  /* Escala tipográfica única — todo tamaño de letra del sitio debe salir de
+     acá en vez de valores rem sueltos, para que la jerarquía visual sea
+     consistente entre el cotizador, el admin, el login y el checkout. */
+  --fs-3xs: 0.6rem;
+  --fs-2xs: 0.65rem;
+  --fs-xs: 0.7rem;
+  --fs-sm: 0.75rem;
+  --fs-base: 0.8rem;
+  --fs-md: 0.85rem;
+  --fs-lg: 0.9rem;
+  --fs-xl: 1rem;
+  --fs-2xl: 1.1rem;
+  --fs-3xl: 1.2rem;
+  --fs-4xl: 1.5rem;
+  --fs-5xl: 1.75rem;
+  --fs-6xl: 2.25rem;
+  --fs-7xl: 2.5rem;
+  --fs-8xl: 2.75rem;
+  --fs-9xl: 3rem;
 }
 
 html {

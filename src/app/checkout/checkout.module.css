@@ -8,7 +8,7 @@
   gap: 16px;
 }
 .topbarBrand {
-  font-size: 1.5rem;
+  font-size: var(--fs-4xl);
   font-weight: 900;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -22,7 +22,7 @@
   background: var(--borde);
 }
 .topbarSub {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -41,7 +41,7 @@
 
 .sectionLabel {
   align-self: flex-start;
-  font-size: 0.6rem;
+  font-size: var(--fs-3xs);
   font-weight: 800;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -73,7 +73,7 @@
   min-width: 0;
 }
 .summaryItemPart {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--blanco);
 }
@@ -82,11 +82,11 @@
   color: var(--texto-muted);
 }
 .summaryItemName {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   color: var(--texto-muted);
 }
 .summaryItemPrice {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--texto-claro);
   white-space: nowrap;
@@ -98,7 +98,7 @@
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--texto-claro);
 }
@@ -106,7 +106,7 @@
   margin-top: 6px;
   padding-top: 14px;
   border-top: 1px solid var(--borde);
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   font-weight: 900;
   color: var(--rojo);
 }
@@ -119,13 +119,13 @@
   border: 1px solid #92400e;
 }
 .envioAlertaTitle {
-  font-size: 0.8rem;
+  font-size: var(--fs-base);
   font-weight: 800;
   color: #fbbf24;
   margin-bottom: 8px;
 }
 .envioAlertaText {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--texto-claro);
   line-height: 1.5;
@@ -140,7 +140,7 @@
   border: 1px solid #fbbf24;
   padding: 12px;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 800;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -175,7 +175,7 @@
   min-width: 0;
 }
 .field label {
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -189,7 +189,7 @@
   border: 1px solid var(--borde);
   padding: 12px 14px;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--blanco);
   outline: none;
@@ -205,7 +205,7 @@
   border-color: #7f1d1d;
 }
 .fieldError {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: #f87171;
 }
@@ -217,7 +217,7 @@
   border: 1px solid var(--rojo);
   padding: 14px;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -248,7 +248,7 @@
   border: 1px solid var(--borde);
   padding: 16px;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: var(--fs-base);
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -268,7 +268,7 @@
   opacity: 0.6;
 }
 .paymentBtnSoon {
-  font-size: 0.55rem;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--texto-muted);
@@ -277,7 +277,7 @@
 }
 .backLink {
   align-self: flex-start;
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--texto-muted);
   text-decoration: underline;
@@ -294,7 +294,7 @@
   padding: 16px 24px;
 }
 .errorBox span {
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   font-weight: 500;
   color: #f87171;
 }
@@ -302,7 +302,7 @@
 .emptyState {
   text-align: center;
   color: var(--texto-muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   padding: 60px 16px;
 }
 .emptyState a {
@@ -315,7 +315,7 @@
   border-top: 1px solid var(--borde);
   padding: 20px 32px;
   text-align: center;
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -329,7 +329,7 @@
 /* Confirmación de pago */
 .confirmMsg {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   color: var(--texto-claro);
   line-height: 1.5;
 }
@@ -350,7 +350,7 @@
     gap: 10px;
   }
   .topbarBrand {
-    font-size: 1.2rem;
+    font-size: var(--fs-3xl);
     letter-spacing: 2px;
   }
   .main {

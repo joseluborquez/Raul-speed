@@ -12,7 +12,7 @@
 }
 
 .brand {
-  font-size: 1.6rem;
+  font-size: var(--fs-4xl);
   font-weight: 900;
   letter-spacing: 3px;
   text-transform: uppercase;
@@ -24,7 +24,7 @@
 .sub {
   display: block;
   margin-top: 6px;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -47,7 +47,7 @@
   gap: 8px;
 }
 .field label {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -58,7 +58,7 @@
   border: 1px solid var(--borde);
   padding: 12px 14px;
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--blanco);
   outline: none;
@@ -74,7 +74,7 @@
   border: 1px solid var(--rojo);
   padding: 14px;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -92,7 +92,7 @@
 }
 
 .error {
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: #f87171;
 }
