@@ -114,19 +114,20 @@
   margin-bottom: 24px;
 }
 
-/* ¿No sabes tu número de parte? — mismo estilo de tarjeta que .envioEstandarCard / .envioAlertaCard */
+/* ¿No sabes tu número de parte? — mismo estilo de tarjeta que .envioEstandarCard / .envioAlertaCard, contenido centrado */
 .helpBox {
   background: var(--negro-card);
   border: 1px solid var(--borde);
   width: 100%;
   margin-top: 16px;
   padding: 18px 20px;
+  text-align: center;
 }
-.helpBoxText {
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--texto-claro);
-  line-height: 1.55;
+.helpBox .envioCardTitle {
+  justify-content: center;
+}
+.helpBoxTitle {
+  text-transform: uppercase;
 }
 .helpBoxLink {
   background: none;
@@ -145,7 +146,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   font-size: var(--fs-sm);
   font-weight: 500;
-  color: var(--texto-muted);
+  color: var(--blanco);
   line-height: 1.5;
 }
 
@@ -312,20 +313,20 @@
   font-size: var(--fs-xs);
   font-weight: 500;
   letter-spacing: 1px;
-  text-transform: uppercase;
   color: var(--texto-muted);
 }
 .hint span {
   color: var(--texto-claro);
 }
 
-/* Aviso de sobrecargo por volumen */
+/* Aviso de sobrecargo por volumen — contenido centrado */
 .noticeCard {
   background: var(--negro-card);
   border: 1px solid #92400e;
   width: 100%;
   margin-top: 16px;
   padding: 24px 28px;
+  text-align: center;
 }
 .noticeTitle {
   font-size: var(--fs-sm);

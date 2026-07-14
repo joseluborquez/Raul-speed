@@ -94,7 +94,7 @@ function EnvioAlertaCard({ whatsappHref }: { whatsappHref: string }) {
 function HelpBox({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
   return (
     <div className={styles.helpBox}>
-      <div className={styles.envioCardTitle}>
+      <div className={`${styles.envioCardTitle} ${styles.helpBoxTitle}`}>
         <span className={styles.envioCardIcon}>❓</span> ¿No sabes tu número de parte?
       </div>
       <p className={styles.envioCardText}>
@@ -305,6 +305,11 @@ export default function Home() {
           <p>Importación directa · Precio en Peso Chileno</p>
         </div>
 
+        <p className={styles.tagline}>
+          Tu repuesto en <span className={styles.taglineHighlight}>semanas</span>, no en meses
+        </p>
+        <div className={styles.taglineDivider} />
+
         <div className={styles.trustRow}>
           <span className={styles.trustItem}>
             <span className={styles.trustCheck}>✓</span> Repuestos 100% originales garantizados
@@ -316,11 +321,6 @@ export default function Home() {
             <span className={styles.trustCheck}>✓</span> Envío con seguimiento
           </span>
         </div>
-
-        <p className={styles.tagline}>
-          Tu repuesto en <span className={styles.taglineHighlight}>semanas</span>, no en meses
-        </p>
-        <div className={styles.taglineDivider} />
 
         <div className={styles.searchCard}>
           <div className={styles.inputRow}>
@@ -375,12 +375,6 @@ export default function Home() {
               <div className={styles.infoRow}>
                 <span className={styles.key}>Repuesto</span>
                 <span className={styles.value}>{resultado.nombre || "—"}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span className={styles.key}>Peso</span>
-                <span className={styles.value}>
-                  {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato"}
-                </span>
               </div>
             </div>
 
