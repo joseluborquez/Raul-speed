@@ -47,15 +47,15 @@ function EnvioEstandarCard({ precioFinal = false }: { precioFinal?: boolean }) {
   return (
     <div className={styles.envioEstandarCard}>
       <div className={styles.envioCardTitle}>
-        <span className={styles.envioCardIcon}>✓</span> Envío estándar incluido
+        <span className={styles.envioCardIcon}>✓</span> Envío internacional incluido
       </div>
       <p className={styles.envioCardText}>
         {precioFinal
-          ? "El precio mostrado es el valor final e incluye IVA y despacho estándar. No pagas nada adicional por piezas de tamaño normal."
-          : "Esta pieza no tiene sobrecargo por tamaño o peso. El costo de despacho se suma una sola vez al agregar tus repuestos al carrito."}
+          ? "El precio mostrado es el valor final e incluye IVA y despacho internacional. No pagas nada adicional por piezas de tamaño normal."
+          : "Esta pieza no tiene sobrecargo por tamaño o peso. El costo de despacho internacional se suma una sola vez al agregar tus repuestos al carrito."}
       </p>
       <p className={styles.envioCardBullet}>
-        Envío estándar: piezas de hasta 500 g — retenes, empaquetaduras, filtros, tensores,
+        Envío internacional: piezas de hasta 500 g — retenes, empaquetaduras, filtros, tensores,
         pastillas, bujías y rodamientos, entre muchos otros — la gran mayoría de los repuestos.
       </p>
     </div>
@@ -97,6 +97,57 @@ function EnvioAlertaCard({ whatsappHref }: { whatsappHref: string }) {
       >
         💬 Confirmar mi envío por WhatsApp
       </a>
+    </div>
+  );
+}
+
+const PASOS_COMPRA = [
+  {
+    titulo: "1️⃣ Pago + Datos 💳",
+    texto: (
+      <>
+        Confirmas con el 100% del pago y dejas tus datos de envío aquí 👉{" "}
+        <a
+          href="https://forms.gle/GPMKbg7bHVznT9aSA"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          forms.gle/GPMKbg7bHVznT9aSA
+        </a>
+      </>
+    ),
+  },
+  {
+    titulo: "2️⃣ Importación ⚙️",
+    texto: "Tu repuesto viaja a Chile en 10 a 20 días hábiles.",
+  },
+  {
+    titulo: "3️⃣ Verificación 📸",
+    texto: "Llega a nuestro centro y te enviamos foto real de tu pieza.",
+  },
+  {
+    titulo: "4️⃣ Despacho 🚀",
+    texto: "Lo enviamos por el courier que elegiste.",
+  },
+  {
+    titulo: "5️⃣ Seguimiento ✅",
+    texto: "Recibes el código para rastrear tu paquete hasta tus manos.",
+  },
+];
+
+function ComoComprarBox() {
+  return (
+    <div className={styles.comoComprarCard}>
+      <div className={styles.comoComprarTitle}>¿Cómo comprar tu repuesto importado? 🇯🇵</div>
+      <div className={styles.comoComprarSteps}>
+        {PASOS_COMPRA.map((paso) => (
+          <div className={styles.comoComprarStep} key={paso.titulo}>
+            <span className={styles.comoComprarStepTitle}>{paso.titulo}</span>
+            <span className={styles.comoComprarStepText}>{paso.texto}</span>
+          </div>
+        ))}
+      </div>
+      <p className={styles.comoComprarFooter}>¡Repuesto 100% original garantizado! 🏍️</p>
     </div>
   );
 }
@@ -351,6 +402,8 @@ export default function Home() {
             Ingresa el número de parte OEM · <span>Solo piezas genuinas</span>
           </p>
         </div>
+
+        <ComoComprarBox />
 
         {!(resultado && resultado.estado === "ok") && (
           <HelpBox onAbrirSolicitud={abrirSolicitud} />

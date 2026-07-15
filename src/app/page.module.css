@@ -151,6 +151,58 @@
   line-height: 1.5;
 }
 
+/* ¿Cómo comprar tu repuesto importado? */
+.comoComprarCard {
+  background: var(--negro-card);
+  border: 1px solid var(--borde);
+  width: 100%;
+  margin-top: 16px;
+  padding: 24px 24px 20px;
+}
+.comoComprarTitle {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--blanco);
+  text-align: center;
+  margin-bottom: 18px;
+}
+.comoComprarSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.comoComprarStep {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.comoComprarStepTitle {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--texto-claro);
+}
+.comoComprarStepText {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--texto-muted);
+  line-height: 1.5;
+}
+.comoComprarStepText a {
+  color: var(--rojo);
+  font-weight: 700;
+  text-decoration: underline;
+  word-break: break-all;
+}
+.comoComprarFooter {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--blanco);
+  text-align: center;
+}
+
 /* Modal de solicitud */
 .modalOverlay {
   position: fixed;
