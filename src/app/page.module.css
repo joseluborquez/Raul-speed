@@ -158,6 +158,7 @@
   width: 100%;
   margin-top: 16px;
   padding: 24px 24px 20px;
+  text-align: center;
 }
 .comoComprarTitle {
   font-size: var(--fs-lg);
@@ -170,11 +171,13 @@
 .comoComprarSteps {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 14px;
 }
 .comoComprarStep {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 3px;
 }
 .comoComprarStepTitle {
@@ -202,6 +205,36 @@
   font-weight: 700;
   color: var(--blanco);
   text-align: center;
+}
+
+/* Botón flotante de WhatsApp */
+.whatsappFab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.whatsappFab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+}
+@media (max-width: 520px) {
+  .whatsappFab {
+    right: 14px;
+    bottom: 14px;
+    width: 50px;
+    height: 50px;
+  }
 }
 
 /* Modal de solicitud */
