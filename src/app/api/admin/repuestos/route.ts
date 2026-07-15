@@ -11,14 +11,18 @@ async function requireAdmin() {
   return esEmailAdmin(user?.email);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const q = url.searchParams.get("q") ?? undefined;
+  const marca = url.searchParams.get("marca") ?? undefined;
+
   try {
-    const repuestos = await listarRepuestosCatalogo();
-    return NextResponse.json({ repuestos });
+    const { repuestos, marcas, truncado } = await listarRepuestosCatalogo({ q, marca });
+    return NextResponse.json({ repuestos, marcas, truncado });
   } catch (exc) {
     console.error("Error listando el catálogo de repuestos:", exc);
     return NextResponse.json({ error: "No se pudo obtener el catálogo" }, { status: 500 });

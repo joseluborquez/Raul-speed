@@ -47,3 +47,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bases de pesos/precios en Excel (fuente de datos para el import a
+# repuestos_catalogo, no hace falta versionarlas — el dato vive en Supabase)
+*.xlsx

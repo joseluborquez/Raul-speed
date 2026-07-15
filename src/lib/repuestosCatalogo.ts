@@ -72,22 +72,18 @@ export async function getPesoManual(partNumber: string): Promise<number | null> 
   return data.peso_kg_manual === null ? null : Number(data.peso_kg_manual);
 }
 
-/**
- * Lista completa para /admin/repuestos — se agrupa por marca en el
- * cliente. Se llama solo desde una ruta ya protegida por sesión (ver
- * /api/admin/repuestos).
- */
-export async function listarRepuestosCatalogo(): Promise<RepuestoCatalogo[]> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("repuestos_catalogo")
-    .select("*")
-    .order("maker", { ascending: true })
-    .order("part_number", { ascending: true });
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((fila) => ({
+function mapearFila(fila: {
+  part_number: string;
+  maker: string | null;
+  nombre: string | null;
+  peso_kg_proveedor: string | number | null;
+  peso_kg_manual: string | number | null;
+  costo_clp: string | number | null;
+  veces_cotizado: number;
+  primera_cotizacion: string;
+  ultima_cotizacion: string;
+}): RepuestoCatalogo {
+  return {
     partNumber: fila.part_number,
     maker: fila.maker,
     nombre: fila.nombre,
@@ -97,7 +93,67 @@ export async function listarRepuestosCatalogo(): Promise<RepuestoCatalogo[]> {
     vecesCotizado: fila.veces_cotizado,
     primeraCotizacion: fila.primera_cotizacion,
     ultimaCotizacion: fila.ultima_cotizacion,
-  }));
+  };
+}
+
+const LIMITE_BUSQUEDA = 200;
+const LIMITE_RECIENTES = 50;
+
+/**
+ * Lista para /admin/repuestos — ya no trae la tabla entera (el catálogo
+ * importado desde Excel tiene decenas de miles de filas, tirarlas todas
+ * al navegador de una sola vez lo dejaría inutilizable). Con texto de
+ * búsqueda o marca, busca en toda la tabla (tope LIMITE_BUSQUEDA). Sin
+ * ningún filtro, muestra solo lo realmente cotizado por un cliente o
+ * admin (veces_cotizado > 0), lo más reciente primero — el catálogo
+ * importado (veces_cotizado = 0) no aparece hasta que se lo busque.
+ */
+export async function listarRepuestosCatalogo(filtros: {
+  q?: string;
+  marca?: string;
+} = {}): Promise<{ repuestos: RepuestoCatalogo[]; marcas: string[]; truncado: boolean }> {
+  const supabase = createAdminClient();
+  const q = filtros.q?.trim() ?? "";
+  const marca = filtros.marca?.trim() ?? "";
+  const hayFiltro = q !== "" || marca !== "";
+
+  let query = supabase.from("repuestos_catalogo").select("*");
+
+  if (q) {
+    const patron = `%${q.replace(/[%_]/g, "\\$&")}%`;
+    query = query.or(`part_number.ilike.${patron},nombre.ilike.${patron}`);
+  }
+  if (marca) {
+    query = marca === "Sin marca" ? query.is("maker", null) : query.eq("maker", marca);
+  }
+
+  if (hayFiltro) {
+    query = query.order("part_number", { ascending: true }).limit(LIMITE_BUSQUEDA + 1);
+  } else {
+    query = query
+      .gt("veces_cotizado", 0)
+      .order("ultima_cotizacion", { ascending: false })
+      .limit(LIMITE_RECIENTES);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const truncado = hayFiltro && (data ?? []).length > LIMITE_BUSQUEDA;
+  const filas = truncado ? (data ?? []).slice(0, LIMITE_BUSQUEDA) : (data ?? []);
+
+  // Marcas para los botones de filtro. PostgREST tiene un tope de 1000
+  // filas por consulta (project-level, ignora .range()), así que traer
+  // la columna "maker" entera para deduplicar en Node no sirve con 63k
+  // filas — se agrupa server-side con una función SQL (ver migración
+  // 0006_repuestos_catalogo_marcas_fn.sql).
+  const { data: marcasData, error: marcasError } = await supabase.rpc(
+    "repuestos_catalogo_marcas",
+  );
+  if (marcasError) throw new Error(marcasError.message);
+  const marcas = (marcasData ?? []).map((fila: { marca: string }) => fila.marca);
+
+  return { repuestos: filas.map(mapearFila), marcas, truncado };
 }
 
 /**

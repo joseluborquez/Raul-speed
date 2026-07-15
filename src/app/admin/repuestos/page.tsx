@@ -35,11 +35,14 @@ function fmtFecha(iso: string): string {
 export default function AdminRepuestosPage() {
   const router = useRouter();
   const [repuestos, setRepuestos] = useState<RepuestoRow[] | null>(null);
+  const [marcasFiltro, setMarcasFiltro] = useState<string[]>([]);
+  const [truncado, setTruncado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pesoInputs, setPesoInputs] = useState<Record<string, string>>({});
   const [guardandoPartNumber, setGuardandoPartNumber] = useState<string | null>(null);
   const [msgPorParte, setMsgPorParte] = useState<Record<string, string>>({});
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
   const [marcaFiltro, setMarcaFiltro] = useState("todas");
 
   async function cerrarSesion() {
@@ -49,15 +52,32 @@ export default function AdminRepuestosPage() {
     router.refresh();
   }
 
+  // Espera a que el admin deje de tipear antes de pegarle a la BD por
+  // cada tecla — la búsqueda ahora corre en el servidor sobre un
+  // catálogo de decenas de miles de filas.
   useEffect(() => {
-    fetch("/api/admin/repuestos")
+    const t = setTimeout(() => setBusquedaDebounced(busqueda.trim()), 300);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (busquedaDebounced) params.set("q", busquedaDebounced);
+    if (marcaFiltro !== "todas") params.set("marca", marcaFiltro);
+
+    fetch(`/api/admin/repuestos?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) setError(d.error);
-        else setRepuestos(d.repuestos);
+        if (d.error) {
+          setError(d.error);
+        } else {
+          setRepuestos(d.repuestos);
+          setMarcasFiltro(d.marcas ?? []);
+          setTruncado(!!d.truncado);
+        }
       })
       .catch(() => setError("Error de conexión"));
-  }, []);
+  }, [busquedaDebounced, marcaFiltro]);
 
   async function guardarPeso(partNumber: string) {
     const raw = pesoInputs[partNumber];
@@ -93,22 +113,10 @@ export default function AdminRepuestosPage() {
     setGuardandoPartNumber(null);
   }
 
-  const marcasDisponibles = new Set<string>();
-  for (const r of repuestos ?? []) marcasDisponibles.add(r.maker?.trim() || "Sin marca");
-  const marcasFiltro = [...marcasDisponibles].sort((a, b) => a.localeCompare(b));
-
-  const q = busqueda.trim().toLowerCase();
-  const repuestosFiltrados = (repuestos ?? []).filter((r) => {
-    const marca = r.maker?.trim() || "Sin marca";
-    if (marcaFiltro !== "todas" && marca !== marcaFiltro) return false;
-    if (q && !r.partNumber.toLowerCase().includes(q) && !(r.nombre ?? "").toLowerCase().includes(q)) {
-      return false;
-    }
-    return true;
-  });
+  const hayFiltro = busquedaDebounced !== "" || marcaFiltro !== "todas";
 
   const grupos = new Map<string, RepuestoRow[]>();
-  for (const r of repuestosFiltrados) {
+  for (const r of repuestos ?? []) {
     const marca = r.maker?.trim() || "Sin marca";
     if (!grupos.has(marca)) grupos.set(marca, []);
     grupos.get(marca)!.push(r);
@@ -154,19 +162,7 @@ export default function AdminRepuestosPage() {
           </div>
         )}
 
-        {!error && repuestos === null && (
-          <div className={styles.panel}>
-            <div className={styles.emptyMsg}>Cargando…</div>
-          </div>
-        )}
-
-        {!error && repuestos !== null && repuestos.length === 0 && (
-          <div className={styles.panel}>
-            <div className={styles.emptyMsg}>Todavía no se ha cotizado ningún repuesto.</div>
-          </div>
-        )}
-
-        {!error && repuestos !== null && repuestos.length > 0 && (
+        {!error && (
           <div className={styles.panel}>
             <div className={styles.buscadorRow}>
               <input
@@ -201,9 +197,32 @@ export default function AdminRepuestosPage() {
           </div>
         )}
 
-        {!error && repuestos !== null && repuestos.length > 0 && repuestosFiltrados.length === 0 && (
+        {!error && !hayFiltro && (
+          <div className={styles.hint}>
+            Mostrando los últimos repuestos cotizados de verdad. Busca por N° de parte, nombre o
+            filtra por marca para ver el resto del catálogo.
+          </div>
+        )}
+
+        {!error && truncado && (
+          <div className={styles.hint}>
+            Hay más de {repuestos?.length ?? 0} resultados — afina la búsqueda para acotar.
+          </div>
+        )}
+
+        {!error && repuestos === null && (
           <div className={styles.panel}>
-            <div className={styles.emptyMsg}>Ningún repuesto coincide con la búsqueda.</div>
+            <div className={styles.emptyMsg}>Cargando…</div>
+          </div>
+        )}
+
+        {!error && repuestos !== null && repuestos.length === 0 && (
+          <div className={styles.panel}>
+            <div className={styles.emptyMsg}>
+              {hayFiltro
+                ? "Ningún repuesto coincide con la búsqueda."
+                : "Todavía no se ha cotizado ningún repuesto."}
+            </div>
           </div>
         )}
 
