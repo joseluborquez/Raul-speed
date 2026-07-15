@@ -89,24 +89,15 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
 
   const { precioJpy, fuente } = resultadoYumbo;
 
-  // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
-  // actualiza este N° de parte, y si el admin ya cargó un peso a mano
-  // para él, ese peso manda sobre el que trae el proveedor — ver
-  // repuestosCatalogo.ts. Nunca debe romper la cotización si Supabase
-  // falla acá.
+  // Peso cargado a mano por el admin para este N° de parte en el catálogo
+  // (si existe) manda sobre el que trae el proveedor — ver getPesoManual()
+  // en repuestosCatalogo.ts. Se usa en clasificarEnvio() más abajo.
   let pesoEfectivo = resultadoYumbo.pesoKg;
   try {
     const pesoManual = await getPesoManual(partNumber);
     if (pesoManual !== null) pesoEfectivo = pesoManual;
-
-    await registrarCotizacion({
-      partNumber,
-      maker: resultadoYumbo.maker,
-      nombre: resultadoYumbo.nombre,
-      pesoKgProveedor: resultadoYumbo.pesoKg,
-    });
   } catch {
-    // sin catálogo esta vez, pero la cotización sigue con el peso del proveedor.
+    // sin catálogo esta vez, la cotización sigue con el peso del proveedor.
   }
 
   // 2. Obtener tipo de cambio JPY → CLP.
@@ -140,6 +131,21 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     precioRepuestoClp,
   });
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
+
+  // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
+  // actualiza este N° de parte con el costo recién calculado. Nunca debe
+  // romper la cotización si Supabase falla acá.
+  try {
+    await registrarCotizacion({
+      partNumber,
+      maker: resultadoYumbo.maker,
+      nombre: resultadoYumbo.nombre,
+      pesoKgProveedor: resultadoYumbo.pesoKg,
+      costoClp: precioRepuestoClp,
+    });
+  } catch {
+    // no rompe la cotización si falla el catálogo.
+  }
 
   return {
     partNumber,

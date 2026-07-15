@@ -12,6 +12,7 @@ export interface RepuestoCatalogo {
   nombre: string | null;
   pesoKgProveedor: number | null;
   pesoKgManual: number | null;
+  costoClp: number | null;
   vecesCotizado: number;
   primeraCotizacion: string;
   ultimaCotizacion: string;
@@ -28,6 +29,7 @@ export async function registrarCotizacion(input: {
   maker: string;
   nombre: string;
   pesoKgProveedor: number;
+  costoClp: number;
 }): Promise<void> {
   const supabase = createAdminClient();
 
@@ -44,6 +46,7 @@ export async function registrarCotizacion(input: {
     maker: input.maker,
     nombre: input.nombre,
     peso_kg_proveedor: input.pesoKgProveedor,
+    costo_clp: input.costoClp,
     veces_cotizado: (existente?.veces_cotizado ?? 0) + 1,
     ultima_cotizacion: ahora,
     updated_at: ahora,
@@ -90,6 +93,7 @@ export async function listarRepuestosCatalogo(): Promise<RepuestoCatalogo[]> {
     nombre: fila.nombre,
     pesoKgProveedor: fila.peso_kg_proveedor === null ? null : Number(fila.peso_kg_proveedor),
     pesoKgManual: fila.peso_kg_manual === null ? null : Number(fila.peso_kg_manual),
+    costoClp: fila.costo_clp === null ? null : Number(fila.costo_clp),
     vecesCotizado: fila.veces_cotizado,
     primeraCotizacion: fila.primera_cotizacion,
     ultimaCotizacion: fila.ultima_cotizacion,

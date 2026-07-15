@@ -12,9 +12,14 @@ interface RepuestoRow {
   nombre: string | null;
   pesoKgProveedor: number | null;
   pesoKgManual: number | null;
+  costoClp: number | null;
   vecesCotizado: number;
   primeraCotizacion: string;
   ultimaCotizacion: string;
+}
+
+function fmt(n: number): string {
+  return new Intl.NumberFormat("es-CL").format(n);
 }
 
 function fmtFecha(iso: string): string {
@@ -34,6 +39,8 @@ export default function AdminRepuestosPage() {
   const [pesoInputs, setPesoInputs] = useState<Record<string, string>>({});
   const [guardandoPartNumber, setGuardandoPartNumber] = useState<string | null>(null);
   const [msgPorParte, setMsgPorParte] = useState<Record<string, string>>({});
+  const [busqueda, setBusqueda] = useState("");
+  const [marcaFiltro, setMarcaFiltro] = useState("todas");
 
   async function cerrarSesion() {
     const supabase = createClient();
@@ -86,8 +93,22 @@ export default function AdminRepuestosPage() {
     setGuardandoPartNumber(null);
   }
 
+  const marcasDisponibles = new Set<string>();
+  for (const r of repuestos ?? []) marcasDisponibles.add(r.maker?.trim() || "Sin marca");
+  const marcasFiltro = [...marcasDisponibles].sort((a, b) => a.localeCompare(b));
+
+  const q = busqueda.trim().toLowerCase();
+  const repuestosFiltrados = (repuestos ?? []).filter((r) => {
+    const marca = r.maker?.trim() || "Sin marca";
+    if (marcaFiltro !== "todas" && marca !== marcaFiltro) return false;
+    if (q && !r.partNumber.toLowerCase().includes(q) && !(r.nombre ?? "").toLowerCase().includes(q)) {
+      return false;
+    }
+    return true;
+  });
+
   const grupos = new Map<string, RepuestoRow[]>();
-  for (const r of repuestos ?? []) {
+  for (const r of repuestosFiltrados) {
     const marca = r.maker?.trim() || "Sin marca";
     if (!grupos.has(marca)) grupos.set(marca, []);
     grupos.get(marca)!.push(r);
@@ -145,6 +166,47 @@ export default function AdminRepuestosPage() {
           </div>
         )}
 
+        {!error && repuestos !== null && repuestos.length > 0 && (
+          <div className={styles.panel}>
+            <div className={styles.buscadorRow}>
+              <input
+                type="text"
+                className={styles.buscadorInput}
+                placeholder="Buscar por N° de parte o nombre…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+            </div>
+            <div className={styles.filterRow}>
+              <button
+                className={`${styles.filterBtn} ${
+                  marcaFiltro === "todas" ? styles.filterBtnActive : ""
+                }`}
+                onClick={() => setMarcaFiltro("todas")}
+              >
+                Todas
+              </button>
+              {marcasFiltro.map((m) => (
+                <button
+                  key={m}
+                  className={`${styles.filterBtn} ${
+                    marcaFiltro === m ? styles.filterBtnActive : ""
+                  }`}
+                  onClick={() => setMarcaFiltro(m)}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!error && repuestos !== null && repuestos.length > 0 && repuestosFiltrados.length === 0 && (
+          <div className={styles.panel}>
+            <div className={styles.emptyMsg}>Ningún repuesto coincide con la búsqueda.</div>
+          </div>
+        )}
+
         {marcasOrdenadas.map((marca) => (
           <div key={marca}>
             <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
@@ -156,9 +218,9 @@ export default function AdminRepuestosPage() {
                   <div className={styles.repuestoRowInfo}>
                     <span className={styles.pedidoRowNombre}>{r.partNumber}</span>
                     <span className={styles.repuestoRowMeta}>
-                      {r.nombre || "—"} · Proveedor:{" "}
-                      {r.pesoKgProveedor ? `${r.pesoKgProveedor} kg` : "sin dato"} · Cotizado{" "}
-                      {r.vecesCotizado}× · Última: {fmtFecha(r.ultimaCotizacion)}
+                      {r.nombre || "—"} · Costo: {r.costoClp ? `$${fmt(r.costoClp)}` : "sin dato"} ·
+                      Proveedor: {r.pesoKgProveedor ? `${r.pesoKgProveedor} kg` : "sin dato"} ·
+                      Cotizado {r.vecesCotizado}× · Última: {fmtFecha(r.ultimaCotizacion)}
                     </span>
                   </div>
                   <div className={styles.pesoManualControl}>

@@ -576,9 +576,32 @@
   min-width: 0;
 }
 .repuestoRowMeta {
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-md);
   color: var(--texto-muted);
   letter-spacing: 0.3px;
+}
+.buscadorRow {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--borde);
+}
+.buscadorInput {
+  width: 100%;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.buscadorInput:focus {
+  border-color: var(--rojo);
+}
+.buscadorInput::placeholder {
+  color: var(--texto-muted);
+  font-weight: 500;
 }
 .pesoManualControl {
   display: flex;
