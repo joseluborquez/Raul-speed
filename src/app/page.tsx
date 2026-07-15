@@ -11,6 +11,15 @@ function fmt(n: number): string {
   return new Intl.NumberFormat("es-CL").format(n);
 }
 
+/**
+ * Precio aproximado a la decena para la ficha de cotización: el costo de
+ * logística y el sobrecargo por peso recién se muestran y se suman al
+ * agregar el ítem al carrito, no antes.
+ */
+function redondearAproximado(n: number): number {
+  return Math.round(n / 10) * 10;
+}
+
 // Copy informativa, no ligada 1:1 a LISTA_A_PALABRAS (sobrecargoEnvio.ts):
 // son categorías en español para el cliente, no los términos en inglés que
 // se buscan en el nombre del repuesto que devuelve el proveedor.
@@ -34,15 +43,16 @@ const CATEGORIAS_VOLUMINOSAS = [
   "Tapas laterales",
 ];
 
-function EnvioEstandarCard() {
+function EnvioEstandarCard({ precioFinal = false }: { precioFinal?: boolean }) {
   return (
     <div className={styles.envioEstandarCard}>
       <div className={styles.envioCardTitle}>
         <span className={styles.envioCardIcon}>✓</span> Envío estándar incluido
       </div>
       <p className={styles.envioCardText}>
-        El precio mostrado es el valor final e incluye IVA y despacho estándar. No pagas nada
-        adicional por piezas de tamaño normal.
+        {precioFinal
+          ? "El precio mostrado es el valor final e incluye IVA y despacho estándar. No pagas nada adicional por piezas de tamaño normal."
+          : "Esta pieza no tiene sobrecargo por tamaño o peso. El costo de despacho se suma una sola vez al agregar tus repuestos al carrito."}
       </p>
       <p className={styles.envioCardBullet}>
         Envío estándar: piezas de hasta 500 g — retenes, empaquetaduras, filtros, tensores,
@@ -363,8 +373,10 @@ export default function Home() {
             <div className={styles.priceHero}>
               <div className={styles.priceLabel}>Precio en Peso Chileno</div>
               <div>
-                <span className={styles.priceAmount}>{fmt(resultado.precioClpFinal ?? 0)}</span>
-                <span className={styles.priceCurrency}>CLP · IVA incluido</span>
+                <span className={styles.priceAmount}>
+                  {fmt(redondearAproximado(resultado.precioRepuestoClp ?? 0))}
+                </span>
+                <span className={styles.priceCurrency}>CLP aprox. · IVA incluido</span>
               </div>
             </div>
             <div className={styles.infoRows}>
@@ -511,7 +523,7 @@ export default function Home() {
               />
             ) : (
               <>
-                {clasificacionCarrito.resultado === "estandar" && <EnvioEstandarCard />}
+                {clasificacionCarrito.resultado === "estandar" && <EnvioEstandarCard precioFinal />}
                 <div className={styles.addRow}>
                   <button className={styles.addBtn} onClick={procederAlPago}>
                     Proceder al pago →
