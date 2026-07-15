@@ -376,6 +376,12 @@ export default function Home() {
                 <span className={styles.key}>Repuesto</span>
                 <span className={styles.value}>{resultado.nombre || "—"}</span>
               </div>
+              <div className={styles.infoRow}>
+                <span className={styles.key}>Peso</span>
+                <span className={styles.value}>
+                  {resultado.pesoKg ? `${resultado.pesoKg} kg` : "Sin dato"}
+                </span>
+              </div>
             </div>
 
             {resultado.envioResultado === "estandar" && <EnvioEstandarCard />}
