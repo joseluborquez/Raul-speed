@@ -164,6 +164,7 @@
   font-weight: 800;
   color: var(--blanco);
   text-align: center;
+  text-transform: uppercase;
   margin-bottom: 18px;
 }
 .comoComprarSteps {

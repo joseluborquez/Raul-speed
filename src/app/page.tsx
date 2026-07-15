@@ -104,18 +104,7 @@ function EnvioAlertaCard({ whatsappHref }: { whatsappHref: string }) {
 const PASOS_COMPRA = [
   {
     titulo: "1️⃣ Pago + Datos 💳",
-    texto: (
-      <>
-        Confirmas con el 100% del pago y dejas tus datos de envío aquí 👉{" "}
-        <a
-          href="https://forms.gle/GPMKbg7bHVznT9aSA"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          forms.gle/GPMKbg7bHVznT9aSA
-        </a>
-      </>
-    ),
+    texto: "Confirmas con el 100% del pago.",
   },
   {
     titulo: "2️⃣ Importación ⚙️",
@@ -136,18 +125,35 @@ const PASOS_COMPRA = [
 ];
 
 function ComoComprarBox() {
+  const [verMas, setVerMas] = useState(false);
+  const [primerPaso, ...restoPasos] = PASOS_COMPRA;
+
   return (
     <div className={styles.comoComprarCard}>
-      <div className={styles.comoComprarTitle}>¿Cómo comprar tu repuesto importado? 🇯🇵</div>
+      <div className={styles.comoComprarTitle}>¿Cómo comprar tu repuesto importado?</div>
       <div className={styles.comoComprarSteps}>
-        {PASOS_COMPRA.map((paso) => (
-          <div className={styles.comoComprarStep} key={paso.titulo}>
-            <span className={styles.comoComprarStepTitle}>{paso.titulo}</span>
-            <span className={styles.comoComprarStepText}>{paso.texto}</span>
-          </div>
-        ))}
+        <div className={styles.comoComprarStep}>
+          <span className={styles.comoComprarStepTitle}>{primerPaso.titulo}</span>
+          <span className={styles.comoComprarStepText}>{primerPaso.texto}</span>
+        </div>
+        {verMas &&
+          restoPasos.map((paso) => (
+            <div className={styles.comoComprarStep} key={paso.titulo}>
+              <span className={styles.comoComprarStepTitle}>{paso.titulo}</span>
+              <span className={styles.comoComprarStepText}>{paso.texto}</span>
+            </div>
+          ))}
       </div>
-      <p className={styles.comoComprarFooter}>¡Repuesto 100% original garantizado! 🏍️</p>
+      {verMas && (
+        <p className={styles.comoComprarFooter}>¡Repuesto 100% original garantizado! 🏍️</p>
+      )}
+      <button
+        type="button"
+        className={styles.noticeToggle}
+        onClick={() => setVerMas((v) => !v)}
+      >
+        {verMas ? "Ver menos ▲" : "Ver más ▼"}
+      </button>
     </div>
   );
 }
@@ -166,6 +172,61 @@ function HelpBox({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
       </p>
       <p className={styles.helpBoxSub}>Te respondemos por WhatsApp</p>
     </div>
+  );
+}
+
+function NoticeSobrecargo({ verMas, onToggle }: { verMas: boolean; onToggle: () => void }) {
+  return (
+    <div className={styles.noticeCard}>
+      <div className={styles.noticeTitle}>⚠️ Importante: sobrecargo por volumen</div>
+      <p className={styles.noticeText}>
+        El precio cotizado corresponde a repuestos OEM 100% originales de tamaño y peso
+        estándar.
+      </p>
+
+      {verMas && (
+        <>
+          <p className={styles.noticeText}>
+            Repuestos de alto volumen (carenados, estanques, basculantes, llantas,
+            cigüeñales, entre otros) tienen un sobrecargo por envío internacional.
+          </p>
+          <div className={styles.noticeList}>
+            <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
+            <div className={styles.noticeListItem}>
+              📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
+            </div>
+            <div className={styles.noticeListItem}>
+              📞 Atención especializada: WhatsApp{" "}
+              <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
+                +56 9 5415 6358
+              </a>
+            </div>
+          </div>
+        </>
+      )}
+
+      <button type="button" className={styles.noticeToggle} onClick={onToggle}>
+        {verMas ? "Ver menos ▲" : "Ver más ▼"}
+      </button>
+    </div>
+  );
+}
+
+function InfoBoxes({
+  onAbrirSolicitud,
+  verMasSobrecargo,
+  onToggleVerMasSobrecargo,
+}: {
+  onAbrirSolicitud: () => void;
+  verMasSobrecargo: boolean;
+  onToggleVerMasSobrecargo: () => void;
+}) {
+  return (
+    <>
+      <ComoComprarBox />
+      <HelpBox onAbrirSolicitud={onAbrirSolicitud} />
+      <NoticeSobrecargo verMas={verMasSobrecargo} onToggle={onToggleVerMasSobrecargo} />
+    </>
   );
 }
 
@@ -403,10 +464,12 @@ export default function Home() {
           </p>
         </div>
 
-        <ComoComprarBox />
-
         {!(resultado && resultado.estado === "ok") && (
-          <HelpBox onAbrirSolicitud={abrirSolicitud} />
+          <InfoBoxes
+            onAbrirSolicitud={abrirSolicitud}
+            verMasSobrecargo={verMasSobrecargo}
+            onToggleVerMasSobrecargo={() => setVerMasSobrecargo((v) => !v)}
+          />
         )}
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
@@ -496,7 +559,13 @@ export default function Home() {
           </div>
         )}
 
-        {resultado && resultado.estado === "ok" && <HelpBox onAbrirSolicitud={abrirSolicitud} />}
+        {resultado && resultado.estado === "ok" && (
+          <InfoBoxes
+            onAbrirSolicitud={abrirSolicitud}
+            verMasSobrecargo={verMasSobrecargo}
+            onToggleVerMasSobrecargo={() => setVerMasSobrecargo((v) => !v)}
+          />
+        )}
 
         {items.length > 0 && (
           <div className={`${styles.cartCard} ${styles.visible}`}>
@@ -586,43 +655,6 @@ export default function Home() {
             )}
           </div>
         )}
-
-        <div className={styles.noticeCard}>
-          <div className={styles.noticeTitle}>⚠️ Importante: sobrecargo por volumen</div>
-          <p className={styles.noticeText}>
-            El precio cotizado corresponde a repuestos OEM 100% originales de tamaño y peso
-            estándar.
-          </p>
-
-          {verMasSobrecargo && (
-            <>
-              <p className={styles.noticeText}>
-                Repuestos de alto volumen (carenados, estanques, basculantes, llantas,
-                cigüeñales, entre otros) tienen un sobrecargo por envío internacional.
-              </p>
-              <div className={styles.noticeList}>
-                <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
-                <div className={styles.noticeListItem}>
-                  📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
-                </div>
-                <div className={styles.noticeListItem}>
-                  📞 Atención especializada: WhatsApp{" "}
-                  <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
-                    +56 9 5415 6358
-                  </a>
-                </div>
-              </div>
-            </>
-          )}
-
-          <button
-            type="button"
-            className={styles.noticeToggle}
-            onClick={() => setVerMasSobrecargo((v) => !v)}
-          >
-            {verMasSobrecargo ? "Ver menos ▲" : "Ver más ▼"}
-          </button>
-        </div>
       </div>
 
       <footer className={styles.footer}>
