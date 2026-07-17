@@ -30,9 +30,10 @@ export default function AdminPage() {
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
   const [error, setError] = useState<{ title: string; msg: string } | null>(null);
 
+  // No resetea a "Cargando…" acá: ese es el estado inicial del useState, y
+  // así el effect de carga inicial no hace ningún setState síncrono. El
+  // reset solo tiene sentido al refrescar a mano — lo hace el botón.
   async function cargarTasa() {
-    setTcValor("Cargando…");
-    setTcFuente("—");
     try {
       const r = await fetch("/api/tipo-cambio");
       const d = await r.json();
@@ -153,6 +154,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    // Carga inicial (fetch al montar → setState cuando llega la respuesta).
+    // La regla marca cualquier setState alcanzable desde el effect aunque
+    // ocurra después de un await; este patrón de data-fetching es legítimo.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarTasa();
     cargarSettings();
   }, []);
@@ -243,7 +248,14 @@ export default function AdminPage() {
                 <span className={styles.tcAutoValue}>{tcValor}</span>
                 <span className={styles.tcAutoFuente}>{tcFuente}</span>
               </div>
-              <button className={styles.btnRefreshTasa} onClick={cargarTasa}>
+              <button
+                className={styles.btnRefreshTasa}
+                onClick={() => {
+                  setTcValor("Cargando…");
+                  setTcFuente("—");
+                  cargarTasa();
+                }}
+              >
                 Actualizar
               </button>
             </div>

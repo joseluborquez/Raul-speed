@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CARRITO_STORAGE_KEY, type CarritoStorage } from "@/lib/carrito";
 import { METODO_ENVIO_LABELS } from "@/lib/metodoEnvio";
 import { validarRut } from "@/lib/rut";
@@ -54,7 +54,16 @@ export default function CheckoutPage() {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Pedido ya creado en un intento de pago anterior con estos mismos datos
+  // (carrito + formulario). Si el cliente reintenta con otro método de pago
+  // sin cambiar nada, se reutiliza en vez de crear un pedido duplicado.
+  const pedidoCreadoRef = useRef<{ payload: string; pedidoId: string } | null>(null);
+
   useEffect(() => {
+    // Lectura de I/O externo (sessionStorage) tras el mount: no puede ir en
+    // el initializer de useState porque en SSR no existe sessionStorage, y
+    // resolverlo ahí causaría un mismatch de hidratación.
+    /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const raw = sessionStorage.getItem(CARRITO_STORAGE_KEY);
       setCarrito(raw ? (JSON.parse(raw) as CarritoStorage) : null);
@@ -62,6 +71,7 @@ export default function CheckoutPage() {
       setCarrito(null);
     }
     setCargando(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   function setCampo(campo: keyof FormState, valor: string) {
@@ -98,45 +108,62 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      const resPedido = await fetch("/api/pedidos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: carrito.items,
-          costoLogisticaClp: carrito.costoLogisticaClp,
-          nombreCompleto: form.nombreCompleto,
-          rut: form.rut,
-          telefono: form.telefono,
-          email: form.email,
-          metodoEnvio: form.metodoEnvio,
-          envioDetalle: form.envioDetalle,
-          region: form.region,
-          ciudad: form.ciudad,
-          comuna: form.comuna,
-          direccion: form.direccion,
-        }),
+      const payloadPedido = JSON.stringify({
+        items: carrito.items,
+        costoLogisticaClp: carrito.costoLogisticaClp,
+        nombreCompleto: form.nombreCompleto,
+        rut: form.rut,
+        telefono: form.telefono,
+        email: form.email,
+        metodoEnvio: form.metodoEnvio,
+        envioDetalle: form.envioDetalle,
+        region: form.region,
+        ciudad: form.ciudad,
+        comuna: form.comuna,
+        direccion: form.direccion,
       });
-      const dataPedido = await resPedido.json();
-      if (!resPedido.ok) {
-        setError(dataPedido.error || "No se pudo crear el pedido");
-        setProcesando(false);
-        return;
+
+      let pedidoId =
+        pedidoCreadoRef.current?.payload === payloadPedido
+          ? pedidoCreadoRef.current.pedidoId
+          : null;
+
+      if (!pedidoId) {
+        const resPedido = await fetch("/api/pedidos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payloadPedido,
+        });
+        const dataPedido = await resPedido.json();
+        if (!resPedido.ok) {
+          setError(dataPedido.error || "No se pudo crear el pedido");
+          setProcesando(false);
+          return;
+        }
+        pedidoId = dataPedido.pedidoId as string;
+        pedidoCreadoRef.current = { payload: payloadPedido, pedidoId };
       }
 
       const resPago = await fetch(`/api/pagos/${metodo}/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pedidoId: dataPedido.pedidoId }),
+        body: JSON.stringify({ pedidoId }),
       });
       const dataPago = await resPago.json();
       if (!resPago.ok) {
+        // 409 = el pedido reutilizado ya no está pendiente (expiró o se
+        // resolvió por otro lado): se descarta para que el próximo intento
+        // cree un pedido nuevo en vez de quedar atascado.
+        if (resPago.status === 409) pedidoCreadoRef.current = null;
         setError(dataPago.error || "No se pudo iniciar el pago");
         setProcesando(false);
         return;
       }
 
-      sessionStorage.removeItem(CARRITO_STORAGE_KEY);
-
+      // El carrito NO se borra acá: si el pago falla o el cliente se
+      // arrepiente en la pasarela, vuelve con su cotización intacta para
+      // reintentar. Lo borra la página de confirmación al ver el pago
+      // aprobado (y sessionStorage muere solo si cierra la pestaña).
       if (metodo === "webpay") {
         // Webpay no es un redirect simple: hay que hacer un POST autosubmit
         // del token hacia la url que entrega Transbank.
