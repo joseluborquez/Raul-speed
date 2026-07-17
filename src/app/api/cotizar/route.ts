@@ -22,6 +22,14 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  // Los N/P OEM reales no pasan de ~20 caracteres; esto viaja como query
+  // param a la API del proveedor, no tiene sentido aceptar strings gigantes.
+  if (partNumber.length > 40) {
+    return NextResponse.json(
+      { estado: "error", mensaje: "Número de parte demasiado largo" },
+      { status: 400 },
+    );
+  }
 
   const resultado = await cotizar(partNumber);
   return NextResponse.json(resultado);

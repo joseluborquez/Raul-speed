@@ -3,10 +3,30 @@
 
 export const YUMBO_API_KEY = process.env.YUMBO_API_KEY ?? "";
 
+/**
+ * Un multiplicador mal configurado no puede pasar a la fórmula: la env var
+ * vacía da Number("") = 0 (→ todos los precios del sitio en $0) y un typo
+ * con coma decimal da NaN. En ambos casos se usa el default y se avisa por
+ * log, en vez de cotizar mal en silencio.
+ */
+function multiplicadorDesdeEnv(nombre: string, porDefecto: number): number {
+  const raw = process.env[nombre];
+  if (raw === undefined || raw === "") return porDefecto;
+
+  const valor = Number(raw);
+  if (!Number.isFinite(valor) || valor <= 0) {
+    console.error(
+      `${nombre}="${raw}" no es un multiplicador válido — usando el default ${porDefecto}`,
+    );
+    return porDefecto;
+  }
+  return valor;
+}
+
 // Fórmula de negocio: precio_JPY × tipo_cambio_CLP × mult_1 × mult_2
 export const FORMULA = {
-  multiplicador1: Number(process.env.FORMULA_MULTIPLICADOR_1 ?? 1.1),
-  multiplicador2: Number(process.env.FORMULA_MULTIPLICADOR_2 ?? 2),
+  multiplicador1: multiplicadorDesdeEnv("FORMULA_MULTIPLICADOR_1", 1.1),
+  multiplicador2: multiplicadorDesdeEnv("FORMULA_MULTIPLICADOR_2", 2),
 };
 
 // Banco Central de Chile — API de tipo de cambio.

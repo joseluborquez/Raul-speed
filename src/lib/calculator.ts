@@ -7,6 +7,21 @@ export interface TipoCambio {
   fuente: string;
 }
 
+/**
+ * Rango de plausibilidad para CLP por 1 JPY. Referencia: la tasa ronda
+ * 5–8 CLP/JPY hace años; el rango es deliberadamente holgado para no
+ * rechazar variación cambiaria real, y solo atrapa respuestas rotas de
+ * las APIs (0, negativo, o un valor con la escala corrida) antes de que
+ * lleguen a los precios del sitio. La tasa manual del admin NO pasa por
+ * este filtro — es su herramienta para forzar cualquier valor.
+ */
+const TASA_JPY_CLP_MIN = 1;
+const TASA_JPY_CLP_MAX = 50;
+
+function tasaPlausible(tasa: number): boolean {
+  return Number.isFinite(tasa) && tasa >= TASA_JPY_CLP_MIN && tasa <= TASA_JPY_CLP_MAX;
+}
+
 // ---------------------------------------------------------------------------
 // Tipo de cambio JPY → CLP
 // ---------------------------------------------------------------------------
@@ -69,7 +84,7 @@ async function fetchRateBCentral(
       if (statusCode !== "OK") continue;
 
       const rawValue = parseFloat(String(obs.value).replace(",", "."));
-      if (Number.isNaN(rawValue)) continue;
+      if (!tasaPlausible(rawValue)) continue;
 
       const indexDateString = String(obs.indexDateString ?? "");
       const fecha = indexDateString ? indexDateToIso(indexDateString) : toFechaStr(hoy);
@@ -95,8 +110,8 @@ async function fetchRateFallback(): Promise<number | null> {
 
     if (data?.result !== "success") return null;
 
-    const clpPerJpy = data?.rates?.CLP;
-    return clpPerJpy ? Number(clpPerJpy) : null;
+    const clpPerJpy = Number(data?.rates?.CLP);
+    return tasaPlausible(clpPerJpy) ? clpPerJpy : null;
   } catch {
     return null;
   }
