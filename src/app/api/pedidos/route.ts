@@ -32,6 +32,20 @@ const CAMPOS_TEXTO_REQUERIDOS = [
   "direccion",
 ] as const;
 
+// Sin tope, estos campos se insertaban tal cual a la DB — cualquiera podía
+// mandar un string gigante en el body del POST.
+const MAX_LARGO_CAMPO: Record<(typeof CAMPOS_TEXTO_REQUERIDOS)[number], number> = {
+  nombreCompleto: 150,
+  rut: 15,
+  telefono: 20,
+  email: 254,
+  region: 100,
+  ciudad: 100,
+  comuna: 100,
+  direccion: 300,
+};
+const MAX_LARGO_ENVIO_DETALLE = 300;
+
 export async function POST(request: Request) {
   // Este endpoint puede re-cotizar hasta MAX_ITEMS_POR_PEDIDO partNumbers
   // distintos contra el proveedor de precios en una sola llamada — sin
@@ -69,6 +83,9 @@ export async function POST(request: Request) {
     if (!partNumber) {
       return NextResponse.json({ error: "Hay un ítem sin número de parte" }, { status: 400 });
     }
+    if (partNumber.length > 40) {
+      return NextResponse.json({ error: "Hay un número de parte inválido" }, { status: 400 });
+    }
     const cantidad = Math.max(1, Math.trunc(Number(raw?.cantidad)) || 1);
 
     let resultado = preciosCache.get(partNumber);
@@ -76,7 +93,9 @@ export async function POST(request: Request) {
       resultado = await cotizar(partNumber);
       preciosCache.set(partNumber, resultado);
     }
-    if (resultado.estado !== "ok") {
+    if (resultado.estado !== "ok" || resultado.precioRepuestoClp == null) {
+      // estado "ok" siempre debería traer precioRepuestoClp — si no,
+      // mejor rechazar el ítem que cobrar $0 por defecto en silencio.
       return NextResponse.json(
         { error: `No se pudo verificar el precio de ${partNumber}. Intenta cotizar de nuevo.` },
         { status: 409 },
@@ -87,16 +106,26 @@ export async function POST(request: Request) {
       partNumber,
       maker: resultado.maker,
       nombre: resultado.nombre,
-      precioRepuestoClp: resultado.precioRepuestoClp ?? 0,
+      precioRepuestoClp: resultado.precioRepuestoClp,
       pesoKg: resultado.pesoKg ?? 0,
       cantidad,
     });
   }
 
   for (const campo of CAMPOS_TEXTO_REQUERIDOS) {
-    if (!String(body?.[campo] ?? "").trim()) {
+    const valor = String(body?.[campo] ?? "").trim();
+    if (!valor) {
       return NextResponse.json({ error: `Falta el campo ${campo}` }, { status: 400 });
     }
+    if (valor.length > MAX_LARGO_CAMPO[campo]) {
+      return NextResponse.json({ error: `El campo ${campo} es demasiado largo` }, { status: 400 });
+    }
+  }
+  if (String(body?.envioDetalle ?? "").length > MAX_LARGO_ENVIO_DETALLE) {
+    return NextResponse.json(
+      { error: "La descripción del método de envío es demasiado larga" },
+      { status: 400 },
+    );
   }
 
   const rut = limpiarRut(String(body.rut));

@@ -5,6 +5,20 @@ export type { MetodoEnvio } from "./metodoEnvio";
 export type MetodoPago = "mercadopago" | "webpay" | "flow";
 export type EstadoPedido = "pendiente" | "pagado" | "fallido" | "expirado" | "reembolsado";
 
+/**
+ * Un pedido "pendiente" más viejo que esto se trata como expirado la
+ * próxima vez que se lee (polling del checkout o intento de iniciar un
+ * pago): el tipo de cambio/precio que congeló ya no es confiable, y sin
+ * esto un pedido de hace semanas se podía pagar igual al precio viejo.
+ * No hay cron: la expiración es perezosa, en lectura.
+ */
+const HORAS_EXPIRACION_PEDIDO = 24;
+
+function haExpirado(createdAt: string): boolean {
+  const limite = Date.now() - HORAS_EXPIRACION_PEDIDO * 60 * 60 * 1000;
+  return new Date(createdAt).getTime() < limite;
+}
+
 export interface ItemPedido {
   partNumber: string;
   maker?: string;
@@ -38,11 +52,9 @@ export interface CrearPedidoInput {
 /**
  * Crea un pedido en estado "pendiente". Se usa el cliente service-role
  * porque necesitamos leer de vuelta el id generado (INSERT ... RETURNING),
- * y la tabla no tiene policy pública de SELECT a propósito. La validación
- * real de los datos ocurre en la ruta de la API antes de llegar acá — la
- * policy de RLS de INSERT queda como defensa adicional solo para el caso
- * de que alguien llame a Supabase directo con la anon key, sin pasar por
- * nuestra API.
+ * y la tabla tiene RLS activado sin ninguna policy a propósito: con la
+ * anon key no se puede leer NI insertar nada en pedidos — la única puerta
+ * de entrada es esta API, que ya validó los datos antes de llegar acá.
  */
 export async function crearPedido(input: CrearPedidoInput): Promise<string> {
   const supabase = createAdminClient();
@@ -94,6 +106,21 @@ export async function asignarMetodoPago(
 }
 
 /**
+ * Marca un pedido pendiente y vencido como expirado. Idempotente por el
+ * filtro de estado, igual que el resto de las transiciones.
+ */
+export async function marcarPedidoExpirado(pedidoId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ estado: "expirado" })
+    .eq("id", pedidoId)
+    .eq("estado", "pendiente");
+
+  if (error) throw new Error(error.message);
+}
+
+/**
  * Devuelve solo el estado del pedido (sin datos personales) — pensado
  * para la ruta pública de polling del checkout.
  */
@@ -101,11 +128,17 @@ export async function getPedidoEstado(pedidoId: string): Promise<EstadoPedido | 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("pedidos")
-    .select("estado")
+    .select("estado, created_at")
     .eq("id", pedidoId)
     .single();
 
   if (error || !data) return null;
+
+  if (data.estado === "pendiente" && haExpirado(data.created_at)) {
+    await marcarPedidoExpirado(pedidoId);
+    return "expirado";
+  }
+
   return data.estado as EstadoPedido;
 }
 
@@ -122,6 +155,12 @@ export async function getPedido(pedidoId: string) {
     .single();
 
   if (error || !data) return null;
+
+  if (data.estado === "pendiente" && haExpirado(data.created_at)) {
+    await marcarPedidoExpirado(pedidoId);
+    data.estado = "expirado";
+  }
+
   return data;
 }
 
@@ -135,7 +174,7 @@ export async function marcarPedidoPagado(
   rawProviderPayload: unknown,
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+  const { data, error } = await supabase
     .from("pedidos")
     .update({
       estado: "pagado",
@@ -143,7 +182,27 @@ export async function marcarPedidoPagado(
       raw_provider_payload: rawProviderPayload,
     })
     .eq("id", pedidoId)
-    .eq("estado", "pendiente");
+    .eq("estado", "pendiente")
+    .select("id");
+
+  // Si esto falla (ej. Supabase caído un instante) no puede quedar en
+  // silencio: el pedido seguiría "pendiente" con la plata ya cobrada. El
+  // caller debe enterarse para que el webhook responda con error y el
+  // proveedor reintente la notificación más tarde.
+  if (error) throw new Error(error.message);
+
+  // 0 filas afectadas = el pedido ya no estaba "pendiente" (pagado,
+  // fallido, expirado...). Un cobro aprobado por el proveedor que no se
+  // puede registrar es plata real que no quedó reflejada en ningún lado
+  // — ej. el cliente pagó en dos pasarelas a la vez. No hay dónde
+  // alertar automáticamente todavía, así que queda como warning visible
+  // en los logs para revisión manual en vez de perderse en silencio.
+  if (!data || data.length === 0) {
+    console.warn(
+      "marcarPedidoPagado: el pedido ya no estaba pendiente — posible doble pago o notificación tardía",
+      { pedidoId },
+    );
+  }
 }
 
 export async function marcarPedidoFallido(
@@ -151,11 +210,13 @@ export async function marcarPedidoFallido(
   rawProviderPayload: unknown,
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+  const { error } = await supabase
     .from("pedidos")
     .update({ estado: "fallido", raw_provider_payload: rawProviderPayload })
     .eq("id", pedidoId)
     .eq("estado", "pendiente");
+
+  if (error) throw new Error(error.message);
 }
 
 /**
@@ -169,11 +230,37 @@ export async function marcarPedidoReembolsado(
   rawProviderPayload: unknown,
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase
+
+  // El payload del reembolso se guarda junto al del pago original, no
+  // pisándolo — perder el payload del pago original hace más difícil
+  // reconciliar manualmente si el proveedor y nuestros datos no calzan.
+  const { data: actual } = await supabase
     .from("pedidos")
-    .update({ estado: "reembolsado", raw_provider_payload: rawProviderPayload })
+    .select("raw_provider_payload")
     .eq("id", pedidoId)
-    .eq("estado", "pagado");
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({
+      estado: "reembolsado",
+      raw_provider_payload: {
+        pago_original: actual?.raw_provider_payload ?? null,
+        reembolso: rawProviderPayload,
+      },
+    })
+    .eq("id", pedidoId)
+    .eq("estado", "pagado")
+    .select("id");
+
+  if (error) throw new Error(error.message);
+
+  if (!data || data.length === 0) {
+    console.warn(
+      "marcarPedidoReembolsado: el pedido ya no estaba pagado — no se pudo registrar el reembolso",
+      { pedidoId },
+    );
+  }
 }
 
 /**

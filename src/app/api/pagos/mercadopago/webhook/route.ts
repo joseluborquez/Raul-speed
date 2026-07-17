@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { verificarPago } from "@/lib/pagos/mercadopago";
+import { firmaWebhookValida, verificarPago } from "@/lib/pagos/mercadopago";
 import {
   getPedido,
   marcarPedidoFallido,
   marcarPedidoPagado,
   marcarPedidoReembolsado,
 } from "@/lib/pedidos";
+import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 
 async function extraerPaymentId(request: Request): Promise<string | null> {
   const url = new URL(request.url);
@@ -20,15 +21,59 @@ async function extraerPaymentId(request: Request): Promise<string | null> {
   }
 }
 
+let avisoSecretoFaltante = false;
+
+/**
+ * MERCADOPAGO_WEBHOOK_SECRET es opcional: si no está configurado (no
+ * existe todavía en .env.example, hay que generarlo en el panel de
+ * Mercado Pago → Webhooks → Firma secreta), se deja pasar sin validar
+ * — igual es seguro porque el estado real siempre se re-consulta contra
+ * la API de Mercado Pago más abajo, esto es solo defensa en profundidad
+ * contra spam que gaste esa llamada.
+ */
+function firmaOk(request: Request, paymentId: string): boolean {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (!secret) {
+    if (!avisoSecretoFaltante) {
+      console.warn(
+        "MERCADOPAGO_WEBHOOK_SECRET no configurado: el webhook de Mercado Pago no valida firma.",
+      );
+      avisoSecretoFaltante = true;
+    }
+    return true;
+  }
+
+  return firmaWebhookValida({
+    xSignature: request.headers.get("x-signature"),
+    xRequestId: request.headers.get("x-request-id"),
+    dataId: paymentId,
+    secret,
+  });
+}
+
 /**
  * Webhook de Mercado Pago. Nunca se confía en el payload de la
  * notificación: solo se usa para saber qué payment id consultar, y el
  * estado real sale siempre de verificarPago() (Payment API).
  */
 export async function POST(request: Request) {
+  // Cada llamada golpea la Payment API de Mercado Pago — sin tope, un
+  // flood de payment ids falsos agota la cuota igual que ya pasó con el
+  // proveedor de precios (ver rateLimit.ts). El límite es generoso porque
+  // acá también caen los reintentos legítimos de Mercado Pago.
+  const ip = obtenerIp(request);
+  if (rateLimitExcedido(`mp-webhook:${ip}`, 60, 60_000)) {
+    return NextResponse.json({ ok: false }, { status: 429 });
+  }
+
   const paymentId = await extraerPaymentId(request);
   if (!paymentId) {
     return NextResponse.json({ ok: true });
+  }
+
+  if (!firmaOk(request, paymentId)) {
+    console.error("Mercado Pago: firma de webhook inválida", { paymentId });
+    return NextResponse.json({ ok: false }, { status: 401 });
   }
 
   try {
@@ -62,9 +107,12 @@ export async function POST(request: Request) {
       // pendiente; Mercado Pago reenvía el webhook cuando el estado cambie.
     }
   } catch (exc) {
-    // Se responde 200 igual para que Mercado Pago no reintente en loop
-    // por una falla nuestra transitoria.
+    // Se responde con error (no 200) para que Mercado Pago SÍ reintente la
+    // notificación: si la falla fue nuestra (ej. Supabase caído un
+    // instante), dar el webhook por procesado dejaría el pedido pendiente
+    // para siempre pese a que el cobro ya se hizo.
     console.error("Error procesando webhook de Mercado Pago:", exc);
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

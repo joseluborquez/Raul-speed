@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { commitPago } from "@/lib/pagos/webpay";
 import { getPedido, getPedidoEstado, marcarPedidoFallido, marcarPedidoPagado } from "@/lib/pedidos";
+import { obtenerIp, rateLimitExcedido } from "@/lib/rateLimit";
 
 /**
  * Transbank redirige al navegador a esta URL después del pago (o del
@@ -22,6 +23,15 @@ async function manejarRetorno(request: Request): Promise<Response> {
     return NextResponse.redirect(destino, 303);
   }
 
+  // Cada llamada golpea commit() de Transbank — sin tope, un flood de
+  // tokens falsos agota la cuota igual que ya pasó con el proveedor de
+  // precios (ver rateLimit.ts). Se redirige en vez de responder un error
+  // crudo porque esto lo pega el navegador del cliente, no el proveedor.
+  const ip = obtenerIp(request);
+  if (rateLimitExcedido(`webpay-return:${ip}`, 60, 60_000)) {
+    return NextResponse.redirect(destino, 303);
+  }
+
   const estadoActual = await getPedidoEstado(pedidoId);
   if (estadoActual && estadoActual !== "pendiente") {
     // Ya se resolvió antes (ej. el usuario recargó la página de retorno).
@@ -33,7 +43,23 @@ async function manejarRetorno(request: Request): Promise<Response> {
   const tbkToken = form?.get("TBK_TOKEN")?.toString() ?? url.searchParams.get("TBK_TOKEN");
 
   if (!tokenWs) {
-    await marcarPedidoFallido(pedidoId, { abandonado: true, tbkToken: tbkToken ?? null });
+    // Solo Transbank manda TBK_TOKEN como señal real de abandono. Si no
+    // viene ninguno de los dos, esta URL se visitó sin pasar por
+    // Transbank (el pedidoId viaja en la query string y cualquiera puede
+    // adivinarla o reusarla) — no hay que mutar el pedido solo por eso,
+    // simplemente se redirige y se deja como estaba.
+    if (!tbkToken) {
+      return NextResponse.redirect(destino, 303);
+    }
+
+    // A diferencia de un webhook, acá no hay reintento del proveedor que
+    // aproveche un error: si esto falla, se loguea y se redirige igual
+    // (el pedido queda en el estado que ya tenía, ej. "pendiente").
+    try {
+      await marcarPedidoFallido(pedidoId, { abandonado: true, tbkToken });
+    } catch (exc) {
+      console.error("Error marcando pedido Webpay como abandonado:", exc);
+    }
     return NextResponse.redirect(destino, 303);
   }
 
@@ -63,9 +89,15 @@ async function manejarRetorno(request: Request): Promise<Response> {
     }
   } catch (exc) {
     console.error("Error confirmando pago Webpay:", exc);
-    await marcarPedidoFallido(pedidoId, {
-      error: exc instanceof Error ? exc.message : String(exc),
-    });
+    // marcarPedidoFallido también puede fallar acá (ej. mismo incidente de
+    // Supabase que causó el error original) — no puede tumbar el redirect.
+    try {
+      await marcarPedidoFallido(pedidoId, {
+        error: exc instanceof Error ? exc.message : String(exc),
+      });
+    } catch (excInterno) {
+      console.error("Error marcando pedido Webpay como fallido:", excInterno);
+    }
   }
 
   return NextResponse.redirect(destino, 303);
