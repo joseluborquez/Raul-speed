@@ -31,12 +31,13 @@ export async function getSettings(): Promise<Settings> {
 
 // Estas dos escrituras usan el cliente de service-role (no el de sesión del
 // admin) porque /api/settings ya valida que quien llama sea admin vía
-// esEmailAdmin() antes de invocarlas. Usar el cliente de sesión acá dependía
-// además de la policy RLS "settings_admin_update" (email del JWT contra la
-// tabla admin_emails): cuando ese chequeo no calzaba exactamente, el UPDATE
-// no tocaba ninguna fila pero tampoco devolvía error, así que la app
-// mostraba "Guardado" sin haber guardado nada. Por eso ahora se verifica
-// que el UPDATE haya afectado la fila.
+// esEmailAdmin() antes de invocarlas. Antes dependían de la policy RLS
+// "settings_admin_update" (email del JWT contra una tabla admin_emails):
+// cuando ese chequeo no calzaba exactamente, el UPDATE no tocaba ninguna
+// fila pero tampoco devolvía error, así que la app mostraba "Guardado" sin
+// haber guardado nada. Esa policy y su tabla ya no existen (se eliminaron
+// en la migración 0007 para dejar ADMIN_EMAILS como única fuente de verdad
+// de quién es admin); igual se verifica que el UPDATE haya afectado la fila.
 
 export async function updateCostoLogisticaClp(valor: number): Promise<void> {
   const supabase = createAdminClient();
