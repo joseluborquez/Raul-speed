@@ -12,7 +12,7 @@ Migrado desde una app Flask/Python a Next.js (App Router, TypeScript).
 - `src/proxy.ts` — protege `/admin/*` redirigiendo a `/admin/login` sin sesión válida.
 - `src/app/api/cotizar/route.ts` — endpoint POST que cotiza un número de parte.
 - `src/app/api/tipo-cambio/route.ts` — endpoint GET que retorna el tipo de cambio JPY → CLP.
-- `src/app/api/settings/route.ts` — GET público / PUT protegido del costo de logística.
+- `src/app/api/settings/route.ts` — GET/PUT del costo de logística y tasa manual (ambos solo admin).
 - `src/lib/config.ts` — variables de entorno y multiplicadores de la fórmula.
 - `src/lib/calculator.ts` — tipo de cambio (Banco Central + fallback) y fórmula de precio.
 - `src/lib/yumbo.ts` — consulta a la API de Yumbo Japan (única fuente de precios).

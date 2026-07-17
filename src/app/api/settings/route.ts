@@ -3,7 +3,20 @@ import { esEmailAdmin } from "@/lib/adminAuth";
 import { getSettings, updateCostoLogisticaClp, updateTipoCambioManual } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
 
+// Solo admin: el único consumidor es el panel (/admin). El cotizador
+// público nunca llama acá — recibe costoLogisticaClp dentro de la
+// respuesta de /api/cotizar — y la tasa manual es un dato de negocio que
+// no hay razón para exponer.
 export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!esEmailAdmin(user?.email)) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   const settings = await getSettings();
   return NextResponse.json(settings);
 }
