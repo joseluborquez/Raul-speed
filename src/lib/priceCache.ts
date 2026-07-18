@@ -18,6 +18,14 @@ export interface ResultadoPrecioProveedor {
   fuente: string;
   maker: string;
   nombre: string;
+  /**
+   * Nombre nativo del proveedor (japonés/katakana), cuando viene distinto
+   * del inglés en `nombre` — ver buscarYumbo() en yumbo.ts. null si no hay
+   * una segunda variante genuina que evaluar. Se usa en clasificarEnvio()
+   * (Filtros del cotizador v10): un código puede venir SOLO en katakana
+   * sin versión en inglés, y evaluar ambos nombres evita perder esa señal.
+   */
+  nombreNativo: string | null;
   esGenuino: boolean;
   /** Peso en kg reportado por el proveedor. 0 = sin dato (posible pieza voluminosa). */
   pesoKg: number;

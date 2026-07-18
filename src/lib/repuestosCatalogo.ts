@@ -1,7 +1,7 @@
 // Catálogo de repuestos ya cotizados (una fila por N° de parte), para que
 // el admin pueda cargar el peso a mano cuando el proveedor no lo trae —
 // ver 0004_repuestos_catalogo.sql para el porqué. El peso manual, una vez
-// cargado, tiene prioridad sobre el del proveedor (ver getPesoManual(),
+// cargado, tiene prioridad sobre el del proveedor (ver getDatosCatalogo(),
 // usado desde cotizar()).
 
 import { createAdminClient } from "./supabase/admin";
@@ -55,21 +55,51 @@ export async function registrarCotizacion(input: {
   if (error) throw new Error(error.message);
 }
 
+export interface DatosCatalogo {
+  /** Peso cargado a mano por el admin (o importado), si existe. */
+  pesoKgManual: number | null;
+  /** false = código marcado inválido en el catálogo. Default true (permisivo:
+   * la mayoría del catálogo no tiene esta info todavía). */
+  oemValido: boolean;
+  /** false = el nombre no está en un formato/idioma evaluable (español,
+   * ruso, japonés) — el peso igual sirve, pero no se evalúan las alarmas de
+   * nombre (están en inglés) ni se muestra el nombre real al cliente.
+   * Default true. */
+  nombreConfiable: boolean;
+  /** Texto de la columna Fuente_Peso, si existe. */
+  fuentePeso: string | null;
+}
+
+const DATOS_CATALOGO_DEFAULT: DatosCatalogo = {
+  pesoKgManual: null,
+  oemValido: true,
+  nombreConfiable: true,
+  fuentePeso: null,
+};
+
 /**
- * Peso cargado a mano por el admin para este N° de parte, si existe.
- * Se llama desde cotizar() para que tenga prioridad sobre el del
- * proveedor.
+ * Datos de calidad/peso cargados para este N° de parte, si existe en el
+ * catálogo. Se llama desde cotizar() para clasificarEnvio() — ver Filtros
+ * del cotizador v3. Sin fila en el catálogo, se asume permisivo (válido,
+ * confiable, sin peso propio) en vez de bloquear algo que no está marcado
+ * explícitamente como problemático.
  */
-export async function getPesoManual(partNumber: string): Promise<number | null> {
+export async function getDatosCatalogo(partNumber: string): Promise<DatosCatalogo> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("repuestos_catalogo")
-    .select("peso_kg_manual")
+    .select("peso_kg_manual, oem_valido, nombre_confiable, fuente_peso")
     .eq("part_number", partNumber)
     .maybeSingle();
 
-  if (error || !data) return null;
-  return data.peso_kg_manual === null ? null : Number(data.peso_kg_manual);
+  if (error || !data) return DATOS_CATALOGO_DEFAULT;
+
+  return {
+    pesoKgManual: data.peso_kg_manual === null ? null : Number(data.peso_kg_manual),
+    oemValido: data.oem_valido !== false,
+    nombreConfiable: data.nombre_confiable !== false,
+    fuentePeso: data.fuente_peso,
+  };
 }
 
 function mapearFila(fila: {

@@ -158,11 +158,19 @@ async function yumboApiFetch(partNumber: string): Promise<ResultadoPrecioProveed
     const precioJpy = parte.priceYen;
     if (!precioJpy || precioJpy <= 0) continue;
 
+    const nombre = parte.nameEn || parte.name || "";
+    // nombreNativo solo se llena cuando hay una segunda variante genuina
+    // que evaluar (si no hay nameEn, `nombre` ya es la nativa — no hay
+    // nada que duplicar).
+    const nombreNativo =
+      parte.nameEn && parte.name && parte.name !== parte.nameEn ? parte.name : null;
+
     return {
       precioJpy: Math.trunc(precioJpy),
       fuente: "yumbo-jp.com",
       maker: parte.markName ?? "",
-      nombre: parte.nameEn || parte.name || "",
+      nombre,
+      nombreNativo,
       esGenuino: true,
       pesoKg: Number(parte.weight) || 0,
     };

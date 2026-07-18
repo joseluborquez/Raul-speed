@@ -1,7 +1,7 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
-import { getPesoManual, registrarCotizacion } from "./repuestosCatalogo";
+import { getDatosCatalogo, registrarCotizacion } from "./repuestosCatalogo";
 import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
 import { buscarYumbo } from "./yumbo";
@@ -89,16 +89,26 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
 
   const { precioJpy, fuente } = resultadoYumbo;
 
-  // Peso cargado a mano por el admin para este N° de parte en el catálogo
-  // (si existe) manda sobre el que trae el proveedor — ver getPesoManual()
-  // en repuestosCatalogo.ts. Se usa en clasificarEnvio() más abajo.
+  // Peso cargado a mano por el admin (o importado) para este N° de parte
+  // en el catálogo manda sobre el que trae el proveedor — ver
+  // getDatosCatalogo() en repuestosCatalogo.ts. oemValido/nombreConfiable
+  // se usan en clasificarEnvio() más abajo (Filtros del cotizador v3).
   let pesoEfectivo = resultadoYumbo.pesoKg;
+  let datosCatalogo = { pesoKgManual: null as number | null, oemValido: true, nombreConfiable: true, fuentePeso: null as string | null };
   try {
-    const pesoManual = await getPesoManual(partNumber);
-    if (pesoManual !== null) pesoEfectivo = pesoManual;
+    datosCatalogo = await getDatosCatalogo(partNumber);
+    if (datosCatalogo.pesoKgManual !== null) pesoEfectivo = datosCatalogo.pesoKgManual;
   } catch {
-    // sin catálogo esta vez, la cotización sigue con el peso del proveedor.
+    // sin catálogo esta vez, la cotización sigue con el peso del proveedor
+    // y los defaults permisivos (válido, confiable).
   }
+
+  // Nombre real solo se muestra al cliente si es confiable (inglés,
+  // evaluable contra las listas de alarma). Si no, se oculta pero se sigue
+  // guardando el real en el catálogo — ver registrarCotizacion() abajo.
+  const nombreParaCliente = datosCatalogo.nombreConfiable
+    ? resultadoYumbo.nombre
+    : `Repuesto original [${partNumber}]`;
 
   // 2. Obtener tipo de cambio JPY → CLP.
   // Si el admin fijó una tasa manual (global, en Supabase), se usa para
@@ -123,12 +133,17 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  // 3. Aplicar fórmula de negocio y clasificar el envío (peso + nombre + precio).
+  // 3. Aplicar fórmula de negocio y clasificar el envío (peso + nombre +
+  // precio + calidad del dato — ver Filtros del cotizador v3).
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
   const clasificacion = clasificarEnvio({
     nombre: resultadoYumbo.nombre,
+    nombreNativo: resultadoYumbo.nombreNativo,
     pesoKg: pesoEfectivo,
     precioRepuestoClp,
+    oemValido: datosCatalogo.oemValido,
+    nombreConfiable: datosCatalogo.nombreConfiable,
+    fuentePeso: datosCatalogo.fuentePeso,
   });
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
 
@@ -151,7 +166,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     partNumber,
     estado: "ok",
     maker: resultadoYumbo.maker,
-    nombre: resultadoYumbo.nombre,
+    nombre: nombreParaCliente,
     precioJpy,
     tipoCambioClp: Number(tipoCambio.toFixed(6)),
     fuenteTipoCambio: fuenteTc,
