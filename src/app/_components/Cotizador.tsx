@@ -23,7 +23,6 @@ export function Cotizador({
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
   const [error, setError] = useState<{ title: string; msg: string } | null>(null);
   const [cantidad, setCantidad] = useState(1);
-  const [verMasSobrecargo, setVerMasSobrecargo] = useState(false);
 
   async function buscar() {
     // El botón se deshabilita con loading, pero el Enter del input no pasa
@@ -131,11 +130,7 @@ export function Cotizador({
       </div>
 
       {!(resultado && resultado.estado === "ok") && (
-        <InfoBoxes
-          onAbrirSolicitud={onAbrirSolicitud}
-          verMasSobrecargo={verMasSobrecargo}
-          onToggleVerMasSobrecargo={() => setVerMasSobrecargo((v) => !v)}
-        />
+        <InfoBoxes onAbrirSolicitud={onAbrirSolicitud} />
       )}
 
       <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
@@ -226,11 +221,7 @@ export function Cotizador({
       )}
 
       {resultado && resultado.estado === "ok" && (
-        <InfoBoxes
-          onAbrirSolicitud={onAbrirSolicitud}
-          verMasSobrecargo={verMasSobrecargo}
-          onToggleVerMasSobrecargo={() => setVerMasSobrecargo((v) => !v)}
-        />
+        <InfoBoxes onAbrirSolicitud={onAbrirSolicitud} />
       )}
     </>
   );

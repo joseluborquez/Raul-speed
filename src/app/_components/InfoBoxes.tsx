@@ -73,57 +73,11 @@ function HelpBox({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
   );
 }
 
-function NoticeSobrecargo({ verMas, onToggle }: { verMas: boolean; onToggle: () => void }) {
-  return (
-    <div className={styles.noticeCard}>
-      <div className={styles.noticeTitle}>⚠️ Importante: sobrecargo por volumen</div>
-      <p className={styles.noticeText}>
-        El precio cotizado corresponde a repuestos OEM 100% originales de tamaño y peso
-        estándar.
-      </p>
-
-      {verMas && (
-        <>
-          <p className={styles.noticeText}>
-            Repuestos de alto volumen (carenados, estanques, basculantes, llantas,
-            cigüeñales, entre otros) tienen un sobrecargo por envío internacional.
-          </p>
-          <div className={styles.noticeList}>
-            <div className={styles.noticeListItem}>✅ Pieza estándar: compra directo aquí.</div>
-            <div className={styles.noticeListItem}>
-              📦 Pieza grande o pesada: consulta el sobrecargo extra por envío internacional.
-            </div>
-            <div className={styles.noticeListItem}>
-              📞 Atención especializada: WhatsApp{" "}
-              <a href="https://wa.me/56954156358" target="_blank" rel="noopener noreferrer">
-                +56 9 5415 6358
-              </a>
-            </div>
-          </div>
-        </>
-      )}
-
-      <button type="button" className={styles.noticeToggle} onClick={onToggle}>
-        {verMas ? "Ver menos ▲" : "Ver más ▼"}
-      </button>
-    </div>
-  );
-}
-
-export function InfoBoxes({
-  onAbrirSolicitud,
-  verMasSobrecargo,
-  onToggleVerMasSobrecargo,
-}: {
-  onAbrirSolicitud: () => void;
-  verMasSobrecargo: boolean;
-  onToggleVerMasSobrecargo: () => void;
-}) {
+export function InfoBoxes({ onAbrirSolicitud }: { onAbrirSolicitud: () => void }) {
   return (
     <>
       <ComoComprarBox />
       <HelpBox onAbrirSolicitud={onAbrirSolicitud} />
-      <NoticeSobrecargo verMas={verMasSobrecargo} onToggle={onToggleVerMasSobrecargo} />
     </>
   );
 }
