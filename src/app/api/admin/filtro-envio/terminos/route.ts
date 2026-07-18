@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { esEmailAdmin } from "@/lib/adminAuth";
-import { agregarTermino, eliminarTermino, esCategoriaValida } from "@/lib/filtroEnvioConfig";
+import { agregarTermino, eliminarTermino } from "@/lib/filtroEnvioConfig";
+import { esCategoriaValida } from "@/lib/sobrecargoEnvio";
 import { createClient } from "@/lib/supabase/server";
 
 async function requireAdmin() {

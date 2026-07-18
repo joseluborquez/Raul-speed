@@ -392,8 +392,10 @@ export const SUBPIEZAS: string[] = [
   "PROTECTOR",
   "SUJETADOR",
   "COJIN",
-  "EMPUÑADURA",
-  "PUÑO",
+  // Sin Ñ a propósito: los NOMBRES pasan por normalizar() (Ñ→N) pero los
+  // términos de las listas no — "EMPUÑADURA" con Ñ jamás calzaría.
+  "EMPUNADURA",
+  "PUNO",
   "ESPEJO RETROVISOR",
   "REFLECTOR",
   "ENCHUFE",
@@ -472,6 +474,32 @@ export interface ListasFiltroEnvio {
   precision: string[];
   exclusiones: string[];
   subpiezas: string[];
+}
+
+/** Derivada de ListasFiltroEnvio para que no puedan divergir. Vive acá
+ * (módulo puro, sin imports de servidor) y no en filtroEnvioConfig.ts a
+ * propósito: la página cliente del panel necesita estos tipos, y si los
+ * importara desde filtroEnvioConfig.ts bastaría que alguien convirtiera
+ * ese `import type` en un import de valor para arrastrar supabase/admin
+ * y next/headers al bundle del cliente y romper el build. */
+export type CategoriaFiltro = keyof ListasFiltroEnvio;
+
+export const CATEGORIAS_FILTRO: CategoriaFiltro[] = [
+  "voluminosas",
+  "pesadas",
+  "precision",
+  "exclusiones",
+  "subpiezas",
+];
+
+export function esCategoriaValida(v: unknown): v is CategoriaFiltro {
+  return typeof v === "string" && (CATEGORIAS_FILTRO as string[]).includes(v);
+}
+
+/** Fila de término como la ve el panel admin (con id para poder borrarla). */
+export interface TerminoFiltro {
+  id: string;
+  termino: string;
 }
 
 export const CONFIG_DEFAULT: ConfigFiltroEnvio = {
@@ -560,8 +588,17 @@ export function contieneTermino(nombreNorm: string, termino: string): boolean {
   if (RE_JAPONES.test(termino)) {
     return nombreNorm.includes(normalizarTermino(termino));
   }
-  return termino.split(" ").every((palabra) => {
-    const re = new RegExp(`\\b${palabra}\\b`);
+  // filter(Boolean): un doble espacio en el término generaría una palabra
+  // vacía cuyo \b\b calza con cualquier cosa. Y sin palabra alguna, el
+  // término no calza con nada (every([]) daría true — todo alarmaría).
+  const palabras = termino.split(" ").filter(Boolean);
+  if (palabras.length === 0) return false;
+  return palabras.every((palabra) => {
+    // Con las listas editables desde /admin, un término puede traer
+    // caracteres especiales de regex ("NO.1+", paréntesis) — sin escapar,
+    // el RegExp inválido reventaría TODAS las cotizaciones del sitio.
+    const escapada = palabra.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\b${escapada}\\b`);
     return re.test(nombreNorm);
   });
 }

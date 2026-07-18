@@ -53,6 +53,25 @@ export async function PUT(request: Request) {
   }
 
   try {
+    // Validación cruzada sobre la config RESULTANTE (actual + cambios,
+    // por si el PUT viene parcial): un tope de peso en 0 mandaría todo el
+    // catálogo a WhatsApp, y un tramo incluido mayor que el tope invierte
+    // la lógica del sobrecargo.
+    const actual = (await listarFiltroEnvioAdmin()).config;
+    const resultante = { ...actual, ...cambios };
+    if (resultante.pesoMaximoKg <= 0) {
+      return NextResponse.json(
+        { error: "El peso máximo debe ser mayor que 0" },
+        { status: 400 },
+      );
+    }
+    if (resultante.pesoIncluidoKg > resultante.pesoMaximoKg) {
+      return NextResponse.json(
+        { error: "El peso incluido no puede superar el peso máximo" },
+        { status: 400 },
+      );
+    }
+
     await actualizarConfigFiltroEnvio(cambios);
     const data = await listarFiltroEnvioAdmin();
     return NextResponse.json(data);

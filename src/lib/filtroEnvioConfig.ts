@@ -13,10 +13,14 @@
 
 import {
   CONFIG_DEFAULT,
+  esCategoriaValida,
   LISTAS_DEFAULT,
+  normalizar,
   RE_JAPONES,
+  type CategoriaFiltro,
   type ConfigFiltroEnvio,
   type ListasFiltroEnvio,
+  type TerminoFiltro,
 } from "./sobrecargoEnvio";
 import { createAdminClient } from "./supabase/admin";
 import { createClient } from "./supabase/server";
@@ -28,13 +32,6 @@ export interface FiltroEnvioData {
 
 const TTL_MS = 60_000;
 let cache: { data: FiltroEnvioData; loadedAt: number } | null = null;
-
-const CATEGORIAS = ["voluminosas", "pesadas", "precision", "exclusiones", "subpiezas"] as const;
-export type CategoriaFiltro = (typeof CATEGORIAS)[number];
-
-export function esCategoriaValida(v: unknown): v is CategoriaFiltro {
-  return typeof v === "string" && (CATEGORIAS as readonly string[]).includes(v);
-}
 
 /**
  * Lee config + listas vigentes desde Supabase, cacheado 60s en memoria
@@ -100,11 +97,6 @@ export async function cargarFiltroEnvio(): Promise<FiltroEnvioData> {
   }
 }
 
-export interface TerminoFiltro {
-  id: string;
-  termino: string;
-}
-
 /**
  * Vista para el panel admin: términos CON id (para poder borrarlos) y
  * config sin caché (el admin quiere ver el valor real vigente, no uno
@@ -163,13 +155,24 @@ export async function listarFiltroEnvioAdmin(): Promise<{
   return { config, listas };
 }
 
-/** Normaliza un término antes de guardarlo: el matching de EN/ES es
- * case-sensitive contra el nombre ya normalizado a mayúsculas (ver
- * normalizar() en sobrecargoEnvio.ts) — un término en minúsculas nunca
- * matchearía. El japonés no tiene mayúsculas, así que se deja intacto. */
+/** Normaliza un término antes de guardarlo, con la MISMA transformación
+ * que reciben los nombres en normalizar() (sobrecargoEnvio.ts) — si el
+ * término guardado no coincide con esa forma, jamás calzará:
+ * - NFKC primero: convierte katakana half-width (ｶｳﾙ, como a veces lo
+ *   pega el admin desde Yumbo) a full-width, que es lo que RE_JAPONES
+ *   detecta y lo que producen los nombres normalizados.
+ * - Japonés: se conserva la forma legible (kana chica y ー intactos — la
+ *   limpieza fina la hace normalizarTermino() al comparar), pero la
+ *   puntuación se vuelve espacio igual que en los nombres: un término
+ *   pegado con coma ("...ユニツト,FI") jamás calzaría por substring.
+ * - EN/ES: mayúsculas, tildes/Ñ fuera (un "PUÑO" con Ñ nunca calzaría
+ *   contra el nombre normalizado "PUNO"), guiones y espacios dobles. */
 function normalizarParaGuardar(termino: string): string {
-  const t = termino.trim();
-  return RE_JAPONES.test(t) ? t : t.toUpperCase();
+  const t = termino.trim().normalize("NFKC");
+  if (RE_JAPONES.test(t)) {
+    return t.replace(/[,·、，．./]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  return normalizar(t);
 }
 
 export async function agregarTermino(categoria: CategoriaFiltro, termino: string): Promise<void> {

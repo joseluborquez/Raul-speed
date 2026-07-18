@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { CategoriaFiltro, TerminoFiltro } from "@/lib/filtroEnvioConfig";
-import type { ConfigFiltroEnvio } from "@/lib/sobrecargoEnvio";
+import type { CategoriaFiltro, ConfigFiltroEnvio, TerminoFiltro } from "@/lib/sobrecargoEnvio";
 import { createClient } from "@/lib/supabase/client";
 import styles from "../admin.module.css";
 
@@ -90,6 +89,19 @@ export default function AdminFiltroEnvioPage() {
     setCargando(false);
   }
 
+  // Tras agregar/borrar un término solo se refrescan las listas — pisar
+  // también `umbrales` descartaría ediciones sin guardar del admin, y
+  // `cargando` haría flashear "Cargando…" en todo el panel.
+  async function recargarListas() {
+    try {
+      const r = await fetch("/api/admin/filtro-envio");
+      const d = await r.json();
+      if (r.ok) setListas(d.listas);
+    } catch {
+      // se mantiene la vista actual; el próximo cambio reintenta.
+    }
+  }
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargar();
@@ -143,7 +155,7 @@ export default function AdminFiltroEnvioPage() {
         setMsgPorCategoria((prev) => ({ ...prev, [categoria]: d.error || "No se pudo agregar" }));
       } else {
         setAddInputs((prev) => ({ ...prev, [categoria]: "" }));
-        await cargar();
+        await recargarListas();
       }
     } catch {
       setMsgPorCategoria((prev) => ({ ...prev, [categoria]: "Error de conexión" }));
@@ -163,9 +175,9 @@ export default function AdminFiltroEnvioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!r.ok) await cargar();
+      if (!r.ok) await recargarListas();
     } catch {
-      await cargar();
+      await recargarListas();
     }
   }
 
