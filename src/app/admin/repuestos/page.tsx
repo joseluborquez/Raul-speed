@@ -146,6 +146,9 @@ export default function AdminRepuestosPage() {
           >
             Repuestos
           </Link>
+          <Link href="/admin/filtro-envio" className={styles.topbarNavLink}>
+            Filtros de envío
+          </Link>
         </nav>
         <div className={styles.topbarBadge}>Administrador</div>
         <button className={styles.btnLimpiarManual} onClick={cerrarSesion}>

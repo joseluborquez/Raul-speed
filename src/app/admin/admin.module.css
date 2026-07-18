@@ -725,6 +725,118 @@
   .priceAmount {
     font-size: var(--fs-6xl);
   }
+
+  .filtroThresholdGrid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .terminoAddRow,
+  .terminoList {
+    padding: 12px 16px;
+  }
+}
+
+/* Filtro de envío (umbrales + términos) */
+.filtroThresholdGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 20px 24px;
+}
+.filtroThresholdItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.filtroThresholdItem label {
+  font-size: var(--fs-3xs);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--texto-muted);
+}
+.filtroThresholdInput {
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.filtroThresholdInput:focus {
+  border-color: var(--rojo);
+}
+.filtroThresholdFooter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 20px;
+}
+
+.terminoAddRow {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--borde);
+}
+.terminoAddInput {
+  flex: 1;
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.terminoAddInput:focus {
+  border-color: var(--rojo);
+}
+.terminoList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 24px;
+}
+.terminoChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #161616;
+  border: 1px solid var(--borde);
+  padding: 6px 6px 6px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--texto-claro);
+  letter-spacing: 0.5px;
+}
+.terminoChipDelete {
+  background: transparent;
+  border: none;
+  color: var(--texto-muted);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  line-height: 1;
+  padding: 2px 6px;
+}
+.terminoChipDelete:hover {
+  color: var(--rojo);
+}
+.terminoEmpty {
+  padding: 4px 24px 16px;
+  font-size: var(--fs-2xs);
+  color: var(--texto-muted);
+}
+.terminoCategoriaMsg {
+  padding: 0 24px 12px;
+  font-size: var(--fs-2xs);
+  color: var(--texto-muted);
 }
 
 /* Footer */

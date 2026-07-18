@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CARRITO_STORAGE_KEY, type ItemCotizacion } from "@/lib/carrito";
 import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
+import { useConfigFiltroEnvio } from "@/lib/useConfigFiltroEnvio";
 import { Carrito } from "./_components/Carrito";
 import { Cotizador } from "./_components/Cotizador";
 import { SolicitudModal } from "./_components/SolicitudModal";
@@ -16,6 +17,7 @@ export default function Home() {
   const [items, setItems] = useState<ItemCotizacion[]>([]);
   const [costoLogisticaClp, setCostoLogisticaClp] = useState(0);
   const [mostrarSolicitud, setMostrarSolicitud] = useState(false);
+  const configFiltro = useConfigFiltroEnvio();
 
   function agregarAlCarrito(item: ItemCotizacion) {
     setItems((prev) => {
@@ -44,7 +46,7 @@ export default function Home() {
   }
 
   function procederAlPago() {
-    if (calcularSobrecargoCarrito(items).resultado === "alerta_whatsapp") return;
+    if (calcularSobrecargoCarrito(items, configFiltro).resultado === "alerta_whatsapp") return;
     sessionStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify({ items, costoLogisticaClp }));
     router.push("/checkout");
   }
@@ -96,6 +98,7 @@ export default function Home() {
         <Carrito
           items={items}
           costoLogisticaClp={costoLogisticaClp}
+          config={configFiltro}
           onQuitarItem={quitarItem}
           onCambiarCantidad={cambiarCantidadItem}
           onProcederAlPago={procederAlPago}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cotizar } from "@/lib/cotizar";
+import { cargarFiltroEnvio } from "@/lib/filtroEnvioConfig";
 import { crearPedido, type ItemPedido, type MetodoEnvio } from "@/lib/pedidos";
 import { getSettings } from "@/lib/settings";
 import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
@@ -101,6 +102,18 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+    if (resultado.envioResultado === "alerta_whatsapp") {
+      // La UI ya esconde el botón "Agregar al carrito" para estos ítems,
+      // pero eso no protege contra alguien pegándole directo a esta API —
+      // "si cualquier pieza del carrito dio WHATSAPP, todo el pedido se
+      // cotiza por WhatsApp" (Filtros del cotizador v3).
+      return NextResponse.json(
+        {
+          error: `${partNumber} requiere cotización de envío personalizada — contáctanos por WhatsApp antes de pagar.`,
+        },
+        { status: 409 },
+      );
+    }
 
     items.push({
       partNumber,
@@ -151,8 +164,10 @@ export async function POST(request: Request) {
     0,
   );
   const pesoTotalKg = items.reduce((sum, item) => sum + (item.pesoKg || 0) * item.cantidad, 0);
+  const { config: configFiltro } = await cargarFiltroEnvio();
   const clasificacionCarrito = calcularSobrecargoCarrito(
     items.map((item) => ({ pesoKg: item.pesoKg ?? 0, cantidad: item.cantidad })),
+    configFiltro,
   );
   if (clasificacionCarrito.resultado === "alerta_whatsapp") {
     return NextResponse.json(

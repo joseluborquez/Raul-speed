@@ -1,5 +1,5 @@
 import type { ItemCotizacion } from "@/lib/carrito";
-import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
+import { calcularSobrecargoCarrito, type ConfigFiltroEnvio } from "@/lib/sobrecargoEnvio";
 import { EnvioAlertaCard, EnvioEstandarCard } from "./EnvioCards";
 import { fmt } from "./format";
 import styles from "../page.module.css";
@@ -7,12 +7,14 @@ import styles from "../page.module.css";
 export function Carrito({
   items,
   costoLogisticaClp,
+  config,
   onQuitarItem,
   onCambiarCantidad,
   onProcederAlPago,
 }: {
   items: ItemCotizacion[];
   costoLogisticaClp: number;
+  config?: ConfigFiltroEnvio;
   onQuitarItem: (id: string) => void;
   onCambiarCantidad: (id: string, delta: number) => void;
   onProcederAlPago: () => void;
@@ -24,7 +26,7 @@ export function Carrito({
     0,
   );
   const pesoTotalCarritoKg = items.reduce((sum, item) => sum + item.pesoKg * item.cantidad, 0);
-  const clasificacionCarrito = calcularSobrecargoCarrito(items);
+  const clasificacionCarrito = calcularSobrecargoCarrito(items, config);
   const sobrecargoCarritoClp = clasificacionCarrito.extraClp;
   const bloqueadoPorPeso = clasificacionCarrito.resultado === "alerta_whatsapp";
   const totalCotizacion = subtotalRepuestos + sobrecargoCarritoClp + costoLogisticaClp;

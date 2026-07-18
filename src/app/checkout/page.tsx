@@ -6,6 +6,7 @@ import { CARRITO_STORAGE_KEY, type CarritoStorage } from "@/lib/carrito";
 import { METODO_ENVIO_LABELS } from "@/lib/metodoEnvio";
 import { validarRut } from "@/lib/rut";
 import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
+import { useConfigFiltroEnvio } from "@/lib/useConfigFiltroEnvio";
 import styles from "./checkout.module.css";
 
 function fmt(n: number): string {
@@ -46,6 +47,7 @@ const FORM_INICIAL: FormState = {
 export default function CheckoutPage() {
   const [carrito, setCarrito] = useState<CarritoStorage | null>(null);
   const [cargando, setCargando] = useState(true);
+  const configFiltro = useConfigFiltroEnvio();
 
   const [form, setForm] = useState<FormState>(FORM_INICIAL);
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -103,7 +105,11 @@ export default function CheckoutPage() {
   }
 
   async function pagarCon(metodo: "mercadopago" | "webpay" | "flow") {
-    if (!carrito || calcularSobrecargoCarrito(carrito.items).resultado === "alerta_whatsapp") return;
+    if (
+      !carrito ||
+      calcularSobrecargoCarrito(carrito.items, configFiltro).resultado === "alerta_whatsapp"
+    )
+      return;
     setProcesando(true);
     setError(null);
 
@@ -215,7 +221,7 @@ export default function CheckoutPage() {
     0,
   );
   const pesoTotalKg = carrito.items.reduce((sum, item) => sum + item.pesoKg * item.cantidad, 0);
-  const clasificacionCarrito = calcularSobrecargoCarrito(carrito.items);
+  const clasificacionCarrito = calcularSobrecargoCarrito(carrito.items, configFiltro);
   const sobrecargoClp = clasificacionCarrito.extraClp;
   const bloqueadoPorPeso = clasificacionCarrito.resultado === "alerta_whatsapp";
   const total = subtotalRepuestos + sobrecargoClp + carrito.costoLogisticaClp;

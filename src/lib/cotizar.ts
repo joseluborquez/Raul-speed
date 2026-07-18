@@ -1,6 +1,7 @@
 // Punto de entrada del cotizador de repuestos OEM.
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
+import { cargarFiltroEnvio } from "./filtroEnvioConfig";
 import { getDatosCatalogo, registrarCotizacion } from "./repuestosCatalogo";
 import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
@@ -136,15 +137,20 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   // 3. Aplicar fórmula de negocio y clasificar el envío (peso + nombre +
   // precio + calidad del dato — ver Filtros del cotizador v3).
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
-  const clasificacion = clasificarEnvio({
-    nombre: resultadoYumbo.nombre,
-    nombreNativo: resultadoYumbo.nombreNativo,
-    pesoKg: pesoEfectivo,
-    precioRepuestoClp,
-    oemValido: datosCatalogo.oemValido,
-    nombreConfiable: datosCatalogo.nombreConfiable,
-    fuentePeso: datosCatalogo.fuentePeso,
-  });
+  const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
+  const clasificacion = clasificarEnvio(
+    {
+      nombre: resultadoYumbo.nombre,
+      nombreNativo: resultadoYumbo.nombreNativo,
+      pesoKg: pesoEfectivo,
+      precioRepuestoClp,
+      oemValido: datosCatalogo.oemValido,
+      nombreConfiable: datosCatalogo.nombreConfiable,
+      fuentePeso: datosCatalogo.fuentePeso,
+    },
+    configFiltro,
+    listasFiltro,
+  );
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
 
   // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
