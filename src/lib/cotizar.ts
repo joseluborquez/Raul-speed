@@ -2,7 +2,13 @@
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
 import { cargarFiltroEnvio } from "./filtroEnvioConfig";
-import { getDatosCatalogo, registrarCotizacion } from "./repuestosCatalogo";
+import {
+  DATOS_CATALOGO_DEFAULT,
+  getDatosCatalogo,
+  registrarCotizacion,
+  tocarCotizacion,
+  type DatosCatalogo,
+} from "./repuestosCatalogo";
 import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
 import { buscarYumbo } from "./yumbo";
@@ -61,10 +67,91 @@ export async function obtenerTipoCambioActivo(
 }
 
 /**
+ * Precio ya final de venta (Base_Cotizador_RaulSpeed_COMPLETA.csv — ver
+ * migración 0013), sin multiplicador de calculator.ts: no es un costo en
+ * JPY, es el precio en CLP que se le cobra al cliente tal cual.
+ */
+async function cotizarDesdeCatalogo(
+  partNumber: string,
+  datosCatalogo: DatosCatalogo,
+): Promise<ResultadoCotizacion> {
+  const pesoEfectivo = datosCatalogo.pesoKgManual ?? 0;
+  const nombreCatalogo = datosCatalogo.nombre?.trim() || null;
+  const nombreParaCliente =
+    datosCatalogo.nombreConfiable && nombreCatalogo
+      ? nombreCatalogo
+      : `Repuesto original [${partNumber}]`;
+
+  const { costoLogisticaClp } = await getSettings();
+  const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
+  const precioRepuestoClp = datosCatalogo.precioVentaClp ?? 0;
+
+  const clasificacion = clasificarEnvio(
+    {
+      nombre: nombreCatalogo ?? "",
+      nombreNativo: null,
+      pesoKg: pesoEfectivo,
+      precioRepuestoClp,
+      oemValido: datosCatalogo.oemValido,
+      nombreConfiable: datosCatalogo.nombreConfiable,
+      fuentePeso: datosCatalogo.fuentePeso,
+    },
+    configFiltro,
+    listasFiltro,
+  );
+  const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
+
+  // Solo cuenta la búsqueda (veces_cotizado) — no toca maker/nombre/peso/
+  // costo, ver tocarCotizacion() en repuestosCatalogo.ts.
+  try {
+    await tocarCotizacion(partNumber);
+  } catch {
+    // no rompe la cotización si falla el contador.
+  }
+
+  return {
+    partNumber,
+    estado: "ok",
+    maker: datosCatalogo.maker ?? "",
+    nombre: nombreParaCliente,
+    precioRepuestoClp,
+    costoLogisticaClp,
+    precioClpFinal,
+    fuente: "Catálogo interno",
+    esGenuino: true,
+    pesoKg: pesoEfectivo,
+    envioResultado: clasificacion.resultado,
+    envioExtraClp: clasificacion.extraClp,
+    envioMensaje: clasificacion.mensaje,
+    fecha: hoyIso(),
+  };
+}
+
+/**
  * Cotiza una pieza OEM dado su número de parte.
  */
 export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
+
+  // 0. Catálogo interno primero: si el código ya tiene precio_venta_clp
+  // cargado (Base_Cotizador_RaulSpeed_COMPLETA.csv), se cotiza directo
+  // desde ahí y NI SIQUIERA se llama a Yumbo — el proveedor ha fallado
+  // repetidas veces (cuota agotada, respuestas malformadas, ver
+  // price_circuit_breaker). Un código marcado oem_valido=false explícito
+  // no toma este atajo: se prefiere que pase por la verificación en vivo
+  // de Yumbo en vez de servir un precio importado para un código ya
+  // señalado como problemático.
+  let datosCatalogo: DatosCatalogo = DATOS_CATALOGO_DEFAULT;
+  try {
+    datosCatalogo = await getDatosCatalogo(partNumber);
+  } catch {
+    // sin catálogo esta vez, sigue con los defaults permisivos y el
+    // flujo de Yumbo de abajo.
+  }
+
+  if (datosCatalogo.oemValido !== false && datosCatalogo.precioVentaClp !== null) {
+    return cotizarDesdeCatalogo(partNumber, datosCatalogo);
+  }
 
   // 1. Obtener precio JPY desde Yumbo Japan.
   let resultadoYumbo;
@@ -95,14 +182,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   // getDatosCatalogo() en repuestosCatalogo.ts. oemValido/nombreConfiable
   // se usan en clasificarEnvio() más abajo (Filtros del cotizador v3).
   let pesoEfectivo = resultadoYumbo.pesoKg;
-  let datosCatalogo = { pesoKgManual: null as number | null, oemValido: true, nombreConfiable: true, fuentePeso: null as string | null };
-  try {
-    datosCatalogo = await getDatosCatalogo(partNumber);
-    if (datosCatalogo.pesoKgManual !== null) pesoEfectivo = datosCatalogo.pesoKgManual;
-  } catch {
-    // sin catálogo esta vez, la cotización sigue con el peso del proveedor
-    // y los defaults permisivos (válido, confiable).
-  }
+  if (datosCatalogo.pesoKgManual !== null) pesoEfectivo = datosCatalogo.pesoKgManual;
 
   // Nombre real solo se muestra al cliente si es confiable (inglés,
   // evaluable contra las listas de alarma). Si no, se oculta pero se sigue

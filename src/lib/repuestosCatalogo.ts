@@ -55,6 +55,40 @@ export async function registrarCotizacion(input: {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Solo incrementa veces_cotizado/ultima_cotizacion — para el atajo de
+ * cotizarDesdeCatalogo() en cotizar.ts, cuando el precio ya vino del
+ * catálogo (precio_venta_clp) y no hay nada nuevo que registrar de
+ * Yumbo. A diferencia de registrarCotizacion(), NO toca maker/nombre/
+ * peso_kg_proveedor/costo_clp — esos campos no tienen un valor "de
+ * proveedor" en este camino y pisarlos correría el riesgo de dañar el
+ * dato importado (ej. costo_clp quedaría redundante con
+ * precio_venta_clp, o peso_kg_proveedor en 0 sin ser real).
+ */
+export async function tocarCotizacion(partNumber: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data: existente } = await supabase
+    .from("repuestos_catalogo")
+    .select("veces_cotizado")
+    .eq("part_number", partNumber)
+    .maybeSingle();
+
+  if (!existente) return;
+
+  const ahora = new Date().toISOString();
+  const { error } = await supabase
+    .from("repuestos_catalogo")
+    .update({
+      veces_cotizado: (existente.veces_cotizado ?? 0) + 1,
+      ultima_cotizacion: ahora,
+      updated_at: ahora,
+    })
+    .eq("part_number", partNumber);
+
+  if (error) throw new Error(error.message);
+}
+
 export interface DatosCatalogo {
   /** Peso cargado a mano por el admin (o importado), si existe. */
   pesoKgManual: number | null;
@@ -68,27 +102,39 @@ export interface DatosCatalogo {
   nombreConfiable: boolean;
   /** Texto de la columna Fuente_Peso, si existe. */
   fuentePeso: string | null;
+  /** Precio FINAL de venta ya en CLP (Base_Cotizador_RaulSpeed_COMPLETA.csv —
+   * ver migración 0013). No null = cotizar() usa este precio directo y ni
+   * siquiera llama a Yumbo (ver cotizarDesdeCatalogo() en cotizar.ts). */
+  precioVentaClp: number | null;
+  maker: string | null;
+  nombre: string | null;
 }
 
-const DATOS_CATALOGO_DEFAULT: DatosCatalogo = {
+export const DATOS_CATALOGO_DEFAULT: DatosCatalogo = {
   pesoKgManual: null,
   oemValido: true,
   nombreConfiable: true,
   fuentePeso: null,
+  precioVentaClp: null,
+  maker: null,
+  nombre: null,
 };
 
 /**
- * Datos de calidad/peso cargados para este N° de parte, si existe en el
- * catálogo. Se llama desde cotizar() para clasificarEnvio() — ver Filtros
- * del cotizador v3. Sin fila en el catálogo, se asume permisivo (válido,
- * confiable, sin peso propio) en vez de bloquear algo que no está marcado
- * explícitamente como problemático.
+ * Datos de calidad/peso/precio cargados para este N° de parte, si existe
+ * en el catálogo. Se llama desde cotizar() — si precioVentaClp no es
+ * null, cotizar() ni siquiera llama a Yumbo (ver cotizarDesdeCatalogo());
+ * si es null, sigue el flujo de siempre y solo se usan peso/oemValido/
+ * nombreConfiable/fuentePeso para clasificarEnvio(). Sin fila en el
+ * catálogo, se asume permisivo (válido, confiable, sin peso ni precio
+ * propio) en vez de bloquear algo que no está marcado explícitamente
+ * como problemático.
  */
 export async function getDatosCatalogo(partNumber: string): Promise<DatosCatalogo> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("repuestos_catalogo")
-    .select("peso_kg_manual, oem_valido, nombre_confiable, fuente_peso")
+    .select("peso_kg_manual, oem_valido, nombre_confiable, fuente_peso, precio_venta_clp, maker, nombre")
     .eq("part_number", partNumber)
     .maybeSingle();
 
@@ -99,6 +145,9 @@ export async function getDatosCatalogo(partNumber: string): Promise<DatosCatalog
     oemValido: data.oem_valido !== false,
     nombreConfiable: data.nombre_confiable !== false,
     fuentePeso: data.fuente_peso,
+    precioVentaClp: data.precio_venta_clp === null ? null : Number(data.precio_venta_clp),
+    maker: data.maker,
+    nombre: data.nombre,
   };
 }
 

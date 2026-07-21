@@ -389,20 +389,26 @@ export default function AdminPage() {
                 <span className={styles.key}>Fabricante</span>
                 <span className={styles.value}>{resultado.maker || "—"}</span>
               </div>
-              <div className={styles.detailRow}>
-                <span className={styles.key}>Precio JPY (origen)</span>
-                <span className={`${styles.value} ${styles.highlight}`}>
-                  ¥{fmt(resultado.precioJpy ?? 0)}
-                </span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.key}>Tipo de cambio usado</span>
-                <span className={styles.value}>{resultado.tipoCambioClp} CLP/JPY</span>
-              </div>
-              <div className={styles.detailRow}>
-                <span className={styles.key}>Fuente tipo de cambio</span>
-                <span className={styles.value}>{resultado.fuenteTipoCambio}</span>
-              </div>
+              {resultado.precioJpy !== undefined && (
+                <div className={styles.detailRow}>
+                  <span className={styles.key}>Precio JPY (origen)</span>
+                  <span className={`${styles.value} ${styles.highlight}`}>
+                    ¥{fmt(resultado.precioJpy)}
+                  </span>
+                </div>
+              )}
+              {resultado.tipoCambioClp !== undefined && (
+                <div className={styles.detailRow}>
+                  <span className={styles.key}>Tipo de cambio usado</span>
+                  <span className={styles.value}>{resultado.tipoCambioClp} CLP/JPY</span>
+                </div>
+              )}
+              {resultado.fuenteTipoCambio !== undefined && (
+                <div className={styles.detailRow}>
+                  <span className={styles.key}>Fuente tipo de cambio</span>
+                  <span className={styles.value}>{resultado.fuenteTipoCambio}</span>
+                </div>
+              )}
               <div className={styles.detailRow}>
                 <span className={styles.key}>Precio repuesto (sin logística)</span>
                 <span className={styles.value}>

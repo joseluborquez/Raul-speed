@@ -18,8 +18,18 @@ export interface TipoCambio {
 const TASA_JPY_CLP_MIN = 1;
 const TASA_JPY_CLP_MAX = 50;
 
-function tasaPlausible(tasa: number): boolean {
+function tasaJpyPlausible(tasa: number): boolean {
   return Number.isFinite(tasa) && tasa >= TASA_JPY_CLP_MIN && tasa <= TASA_JPY_CLP_MAX;
+}
+
+/** Mismo criterio que tasaJpyPlausible() pero para USD/CLP (dólar
+ * observado ronda 500–1.200 CLP en los últimos años) — usada solo por
+ * getUsdToClp() al importar Base_Cotizador_RaulSpeed_COMPLETA.csv. */
+const TASA_USD_CLP_MIN = 200;
+const TASA_USD_CLP_MAX = 3000;
+
+function tasaUsdPlausible(tasa: number): boolean {
+  return Number.isFinite(tasa) && tasa >= TASA_USD_CLP_MIN && tasa <= TASA_USD_CLP_MAX;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,8 +49,10 @@ function indexDateToIso(indexDateString: string): string {
 }
 
 /**
- * Consulta el Banco Central de Chile para obtener JPY → CLP.
- * La serie F072.CLP.JPY.N.O.D publica directamente CLP por 1 JPY.
+ * Consulta el Banco Central de Chile para obtener una tasa de cambio a
+ * CLP dada una serie (JPY: F072.CLP.JPY.N.O.D, USD/Dólar Observado:
+ * F073.TCO.PRE.Z.D — ver BCENTRAL en config.ts), ambas publican
+ * directamente CLP por 1 unidad de la otra moneda.
  *
  * El Banco Central no publica valores los fines de semana ni feriados
  * (esos días vienen con statusCode "ND" y value "NaN"), por lo que se
@@ -50,6 +62,8 @@ function indexDateToIso(indexDateString: string): string {
 async function fetchRateBCentral(
   hoy: Date,
   diasAtras: number,
+  seriesId: string,
+  esPlausible: (tasa: number) => boolean,
 ): Promise<{ tasa: number; fecha: string } | null> {
   const desde = new Date(hoy);
   desde.setDate(desde.getDate() - diasAtras);
@@ -58,7 +72,7 @@ async function fetchRateBCentral(
     user: BCENTRAL.user,
     pass: BCENTRAL.pass,
     function: "GetSeries",
-    timeseries: BCENTRAL.seriesJpy,
+    timeseries: seriesId,
     firstdate: toFechaStr(desde),
     lastdate: toFechaStr(hoy),
   });
@@ -84,7 +98,7 @@ async function fetchRateBCentral(
       if (statusCode !== "OK") continue;
 
       const rawValue = parseFloat(String(obs.value).replace(",", "."));
-      if (!tasaPlausible(rawValue)) continue;
+      if (!esPlausible(rawValue)) continue;
 
       const indexDateString = String(obs.indexDateString ?? "");
       const fecha = indexDateString ? indexDateToIso(indexDateString) : toFechaStr(hoy);
@@ -97,12 +111,15 @@ async function fetchRateBCentral(
 }
 
 /**
- * Fallback: obtiene JPY/CLP desde la API pública de exchangerate-api.
+ * Fallback: obtiene <moneda>/CLP desde la API pública de exchangerate-api.
  * No requiere credenciales. Se usa cuando el Banco Central falla.
  */
-async function fetchRateFallback(): Promise<number | null> {
+async function fetchRateFallback(
+  moneda: "JPY" | "USD",
+  esPlausible: (tasa: number) => boolean,
+): Promise<number | null> {
   try {
-    const resp = await fetch("https://open.er-api.com/v6/latest/JPY", {
+    const resp = await fetch(`https://open.er-api.com/v6/latest/${moneda}`, {
       signal: AbortSignal.timeout(15_000),
     });
     if (!resp.ok) return null;
@@ -110,8 +127,8 @@ async function fetchRateFallback(): Promise<number | null> {
 
     if (data?.result !== "success") return null;
 
-    const clpPerJpy = Number(data?.rates?.CLP);
-    return tasaPlausible(clpPerJpy) ? clpPerJpy : null;
+    const clpPorUnidad = Number(data?.rates?.CLP);
+    return esPlausible(clpPorUnidad) ? clpPorUnidad : null;
   } catch {
     return null;
   }
@@ -127,18 +144,42 @@ async function fetchRateFallback(): Promise<number | null> {
 export async function getJpyToClp(): Promise<TipoCambio> {
   const today = new Date();
 
-  const resultado = await fetchRateBCentral(today, 4);
+  const resultado = await fetchRateBCentral(today, 4, BCENTRAL.seriesJpy, tasaJpyPlausible);
   if (resultado !== null) {
     return { tasa: resultado.tasa, fuente: `Banco Central Chile (${resultado.fecha})` };
   }
 
-  const rate = await fetchRateFallback();
+  const rate = await fetchRateFallback("JPY", tasaJpyPlausible);
   if (rate !== null) {
     return { tasa: rate, fuente: `exchangerate-api.com (${toFechaStr(today)})` };
   }
 
   throw new Error(
     "No se pudo obtener el tipo de cambio JPY/CLP. Verifica credenciales del Banco Central.",
+  );
+}
+
+/**
+ * Retorna la tasa USD → CLP (Dólar Observado) y su fuente. Uso puntual:
+ * solo la usa el import de Base_Cotizador_RaulSpeed_COMPLETA.csv para
+ * convertir a CLP el precio en USD de Honda/Kawasaki/Yamaha (Suzuki ya
+ * viene en CLP) — no es parte del flujo de cotización en vivo.
+ */
+export async function getUsdToClp(): Promise<TipoCambio> {
+  const today = new Date();
+
+  const resultado = await fetchRateBCentral(today, 4, BCENTRAL.seriesUsd, tasaUsdPlausible);
+  if (resultado !== null) {
+    return { tasa: resultado.tasa, fuente: `Banco Central Chile (${resultado.fecha})` };
+  }
+
+  const rate = await fetchRateFallback("USD", tasaUsdPlausible);
+  if (rate !== null) {
+    return { tasa: rate, fuente: `exchangerate-api.com (${toFechaStr(today)})` };
+  }
+
+  throw new Error(
+    "No se pudo obtener el tipo de cambio USD/CLP. Verifica credenciales del Banco Central.",
   );
 }
 

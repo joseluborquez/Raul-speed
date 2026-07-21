@@ -729,8 +729,14 @@ export function clasificarEnvio(
   const nombresRaw = [nombre, nombreNativo].filter((v): v is string => !!v && v.trim() !== "");
   const normalizados = nombreEvaluable ? nombresRaw.map(normalizar) : [];
 
+  // "estimado"/"nivel 3"/"nivel 4": formato de Fuente_peso en
+  // Base_Cotizador_RaulSpeed_COMPLETA.csv ("NIVEL 3 · estimado por
+  // familia de código...", "NIVEL 4 · sin dato de peso") — no calzaba
+  // con el regex original, que solo cubría el formato de imports previos.
   const leyenda =
-    !sinPeso && (fuentePeso || "").match(/aproximado|inferido/i) ? LEYENDA_PESO_ESTIMADO : "";
+    !sinPeso && (fuentePeso || "").match(/aproximado|inferido|estimado|nivel 3|nivel 4/i)
+      ? LEYENDA_PESO_ESTIMADO
+      : "";
 
   // Paso 1: PRECISIÓN nunca alarma por nombre.
   const esPrecision = nombreEvaluable && algunoCoincideMultiple(normalizados, listas.precision);
