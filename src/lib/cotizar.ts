@@ -2,6 +2,7 @@
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
 import { cargarFiltroEnvio } from "./filtroEnvioConfig";
+import { buscarPesoPorPrefijo, registrarUsoPrefijo } from "./prefijosLivianos";
 import {
   DATOS_CATALOGO_DEFAULT,
   getDatosCatalogo,
@@ -9,7 +10,14 @@ import {
   tocarCotizacion,
   type DatosCatalogo,
 } from "./repuestosCatalogo";
-import { clasificarEnvio, type ResultadoEnvio } from "./sobrecargoEnvio";
+import {
+  clasificarEnvio,
+  type ClasificacionEnvio,
+  type ConfigFiltroEnvio,
+  type DatosClasificacion,
+  type ListasFiltroEnvio,
+  type ResultadoEnvio,
+} from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
 import { buscarYumbo } from "./yumbo";
 
@@ -67,6 +75,63 @@ export async function obtenerTipoCambioActivo(
 }
 
 /**
+ * Filtro adicional por prefijo de código OEM (ver
+ * supabase/migrations/0015_prefijos_livianos.sql y prefijosLivianos.ts):
+ * reduce cotizaciones que caen a WhatsApp sin necesidad. Corre SOLO
+ * cuando clasificarEnvio() ya dio "alerta_whatsapp" con el peso normal —
+ * nunca toca un resultado que ya pasaba. Si la familia marca+prefijo del
+ * código es conocida (confianza ALTA/MEDIA), reintenta la clasificación
+ * asumiendo el Peso_p95_kg de esa familia; si eso también evita la
+ * alerta, lo usa y registra el rescate para auditoría. Si no hay match, o
+ * el reintento sigue alarmando (ej. nombre en PESADAS/VOLUMINOSAS), se
+ * conserva el resultado original sin cambios.
+ */
+async function conFiltroPrefijo(
+  datos: DatosClasificacion,
+  partNumber: string,
+  maker: string | null | undefined,
+  configFiltro: ConfigFiltroEnvio,
+  listasFiltro: ListasFiltroEnvio,
+): Promise<{ pesoKg: number; clasificacion: ClasificacionEnvio }> {
+  const clasificacion = clasificarEnvio(datos, configFiltro, listasFiltro);
+  if (clasificacion.resultado !== "alerta_whatsapp") {
+    return { pesoKg: datos.pesoKg, clasificacion };
+  }
+
+  let prefijo;
+  try {
+    prefijo = await buscarPesoPorPrefijo(partNumber, maker);
+  } catch {
+    return { pesoKg: datos.pesoKg, clasificacion };
+  }
+  if (!prefijo) return { pesoKg: datos.pesoKg, clasificacion };
+
+  const clasificacionConPrefijo = clasificarEnvio(
+    {
+      ...datos,
+      pesoKg: prefijo.pesoKg,
+      fuentePeso: `Estimado por familia de prefijo OEM (${prefijo.categoria ?? "sin categoría"}, confianza ${prefijo.confianza})`,
+    },
+    configFiltro,
+    listasFiltro,
+  );
+  if (clasificacionConPrefijo.resultado === "alerta_whatsapp") {
+    return { pesoKg: datos.pesoKg, clasificacion };
+  }
+
+  registrarUsoPrefijo({
+    partNumber,
+    marca: prefijo.marca,
+    prefijo: prefijo.prefijo,
+    categoriaDominante: prefijo.categoria,
+    confianza: prefijo.confianza,
+    pesoAsignadoKg: prefijo.pesoKg,
+  }).catch(() => {});
+
+  return { pesoKg: prefijo.pesoKg, clasificacion: clasificacionConPrefijo };
+}
+
+/**
  * Precio ya final de venta (Base_Cotizador_RaulSpeed_COMPLETA.csv — ver
  * migración 0013), sin multiplicador de calculator.ts: no es un costo en
  * JPY, es el precio en CLP que se le cobra al cliente tal cual.
@@ -86,7 +151,7 @@ async function cotizarDesdeCatalogo(
   const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
   const precioRepuestoClp = datosCatalogo.precioVentaClp ?? 0;
 
-  const clasificacion = clasificarEnvio(
+  const { pesoKg: pesoFinal, clasificacion } = await conFiltroPrefijo(
     {
       nombre: nombreCatalogo ?? "",
       nombreNativo: null,
@@ -96,6 +161,8 @@ async function cotizarDesdeCatalogo(
       nombreConfiable: datosCatalogo.nombreConfiable,
       fuentePeso: datosCatalogo.fuentePeso,
     },
+    partNumber,
+    datosCatalogo.maker,
     configFiltro,
     listasFiltro,
   );
@@ -119,7 +186,7 @@ async function cotizarDesdeCatalogo(
     precioClpFinal,
     fuente: "Catálogo interno",
     esGenuino: true,
-    pesoKg: pesoEfectivo,
+    pesoKg: pesoFinal,
     envioResultado: clasificacion.resultado,
     envioExtraClp: clasificacion.extraClp,
     envioMensaje: clasificacion.mensaje,
@@ -218,7 +285,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   // precio + calidad del dato — ver Filtros del cotizador v3).
   const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
   const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
-  const clasificacion = clasificarEnvio(
+  const { pesoKg: pesoFinal, clasificacion } = await conFiltroPrefijo(
     {
       nombre: resultadoYumbo.nombre,
       nombreNativo: resultadoYumbo.nombreNativo,
@@ -228,6 +295,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
       nombreConfiable: datosCatalogo.nombreConfiable,
       fuentePeso: datosCatalogo.fuentePeso,
     },
+    partNumber,
+    resultadoYumbo.maker,
     configFiltro,
     listasFiltro,
   );
@@ -261,7 +330,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     precioClpFinal,
     fuente,
     esGenuino: resultadoYumbo.esGenuino,
-    pesoKg: pesoEfectivo,
+    pesoKg: pesoFinal,
     envioResultado: clasificacion.resultado,
     envioExtraClp: clasificacion.extraClp,
     envioMensaje: clasificacion.mensaje,
