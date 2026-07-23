@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { fmt, redondearAproximado } from "../_components/format";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./admin.module.css";
-
-function fmt(n: number): string {
-  return new Intl.NumberFormat("es-CL").format(n);
-}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -375,10 +372,10 @@ export default function AdminPage() {
             </div>
 
             <div className={styles.priceHero}>
-              <div className={styles.priceLabel}>Precio Final en Peso Chileno</div>
+              <div className={styles.priceLabel}>Precio en Peso Chileno</div>
               <div>
                 <span className={styles.priceAmount}>
-                  {fmt(resultado.precioClpFinal ?? 0)}
+                  {fmt(redondearAproximado(resultado.precioRepuestoClp ?? 0))}
                 </span>
                 <span className={styles.priceCurrency}>CLP</span>
               </div>
