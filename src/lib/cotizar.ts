@@ -132,9 +132,10 @@ async function conFiltroPrefijo(
 }
 
 /**
- * Precio ya final de venta (Base_Cotizador_RaulSpeed_COMPLETA.csv — ver
- * migración 0013), sin multiplicador de calculator.ts: no es un costo en
- * JPY, es el precio en CLP que se le cobra al cliente tal cual.
+ * Costo del catálogo interno en JPY (re-importado — ver getDatosCatalogo()
+ * en repuestosCatalogo.ts): pasa por la misma fórmula de negocio y tasa
+ * de cambio vigente (manual o Banco Central) que el camino de Yumbo, así
+ * que reacciona igual a un cambio de tasa manual del admin.
  */
 async function cotizarDesdeCatalogo(
   partNumber: string,
@@ -147,9 +148,26 @@ async function cotizarDesdeCatalogo(
       ? nombreCatalogo
       : `Repuesto original [${partNumber}]`;
 
-  const { costoLogisticaClp } = await getSettings();
+  const { costoLogisticaClp, tipoCambioManual } = await getSettings();
+
+  let tipoCambio: number;
+  let fuenteTc: string;
+  try {
+    const tc = await obtenerTipoCambioActivo(tipoCambioManual);
+    tipoCambio = tc.tasa;
+    fuenteTc = tc.fuente;
+  } catch (exc) {
+    return {
+      partNumber,
+      estado: "error_tipo_cambio",
+      mensaje: exc instanceof Error ? exc.message : String(exc),
+      fecha: hoyIso(),
+    };
+  }
+
   const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
-  const precioRepuestoClp = datosCatalogo.precioVentaClp ?? 0;
+  const precioJpy = datosCatalogo.costoJpy ?? 0;
+  const precioRepuestoClp = calcularPrecioClp(precioJpy, tipoCambio);
 
   const { pesoKg: pesoFinal, clasificacion } = await conFiltroPrefijo(
     {
@@ -181,6 +199,9 @@ async function cotizarDesdeCatalogo(
     estado: "ok",
     maker: datosCatalogo.maker ?? "",
     nombre: nombreParaCliente,
+    precioJpy,
+    tipoCambioClp: Number(tipoCambio.toFixed(6)),
+    fuenteTipoCambio: fuenteTc,
     precioRepuestoClp,
     costoLogisticaClp,
     precioClpFinal,
@@ -200,14 +221,14 @@ async function cotizarDesdeCatalogo(
 export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
 
-  // 0. Catálogo interno primero: si el código ya tiene precio_venta_clp
-  // cargado (Base_Cotizador_RaulSpeed_COMPLETA.csv), se cotiza directo
-  // desde ahí y NI SIQUIERA se llama a Yumbo — el proveedor ha fallado
-  // repetidas veces (cuota agotada, respuestas malformadas, ver
-  // price_circuit_breaker). Un código marcado oem_valido=false explícito
-  // no toma este atajo: se prefiere que pase por la verificación en vivo
-  // de Yumbo en vez de servir un precio importado para un código ya
-  // señalado como problemático.
+  // 0. Catálogo interno primero: si el código ya tiene costo_jpy cargado
+  // (catálogo re-importado), se cotiza directo desde ahí y NI SIQUIERA se
+  // llama a Yumbo — el proveedor ha fallado repetidas veces (cuota
+  // agotada, respuestas malformadas, ver price_circuit_breaker). Un
+  // código marcado oem_valido=false explícito no toma este atajo: se
+  // prefiere que pase por la verificación en vivo de Yumbo en vez de
+  // servir un precio importado para un código ya señalado como
+  // problemático.
   let datosCatalogo: DatosCatalogo = DATOS_CATALOGO_DEFAULT;
   try {
     datosCatalogo = await getDatosCatalogo(partNumber);
@@ -216,7 +237,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     // flujo de Yumbo de abajo.
   }
 
-  if (datosCatalogo.oemValido !== false && datosCatalogo.precioVentaClp !== null) {
+  if (datosCatalogo.oemValido !== false && datosCatalogo.costoJpy !== null) {
     return cotizarDesdeCatalogo(partNumber, datosCatalogo);
   }
 
