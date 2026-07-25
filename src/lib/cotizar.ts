@@ -324,8 +324,11 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
 
   // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
-  // actualiza este N° de parte con el costo recién calculado. Nunca debe
-  // romper la cotización si Supabase falla acá.
+  // actualiza este N° de parte con el costo recién calculado. Guarda
+  // costo_jpy (precioJpy tal cual lo devolvió Yumbo) para que la PRÓXIMA
+  // cotización de este mismo código se gradúe al atajo del catálogo
+  // interno (ver cotizarDesdeCatalogo()) y ya no necesite llamar a Yumbo.
+  // Nunca debe romper la cotización si Supabase falla acá.
   try {
     await registrarCotizacion({
       partNumber,
@@ -333,6 +336,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
       nombre: resultadoYumbo.nombre,
       pesoKgProveedor: resultadoYumbo.pesoKg,
       costoClp: precioRepuestoClp,
+      costoJpy: precioJpy,
     });
   } catch {
     // no rompe la cotización si falla el catálogo.

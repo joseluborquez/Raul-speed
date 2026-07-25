@@ -13,6 +13,7 @@ export interface RepuestoCatalogo {
   pesoKgProveedor: number | null;
   pesoKgManual: number | null;
   costoClp: number | null;
+  costoJpy: number | null;
   vecesCotizado: number;
   primeraCotizacion: string;
   ultimaCotizacion: string;
@@ -20,9 +21,17 @@ export interface RepuestoCatalogo {
 
 /**
  * Registra o actualiza un repuesto en el catálogo tras una cotización
- * exitosa. No incluye peso_kg_manual ni primera_cotizacion en el upsert
- * a propósito: Postgres solo pisa las columnas listadas en ON CONFLICT
- * DO UPDATE, así que el peso que el admin ya haya cargado queda intacto.
+ * exitosa vía Yumbo. No incluye peso_kg_manual ni primera_cotizacion en
+ * el upsert a propósito: Postgres solo pisa las columnas listadas en ON
+ * CONFLICT DO UPDATE, así que el peso que el admin ya haya cargado queda
+ * intacto.
+ *
+ * costoJpy queda guardado en costo_jpy: la próxima vez que se cotice este
+ * mismo N° de parte, getDatosCatalogo() lo lee y cotizarDesdeCatalogo()
+ * lo usa directo (recalculado con la tasa vigente) sin volver a llamar a
+ * Yumbo — así un código consultado una vez "se gradúa" al catálogo
+ * interno. costoClp queda además como snapshot informativo (se muestra en
+ * /admin/repuestos) pero ya no es lo que decide el atajo del catálogo.
  */
 export async function registrarCotizacion(input: {
   partNumber: string;
@@ -30,6 +39,7 @@ export async function registrarCotizacion(input: {
   nombre: string;
   pesoKgProveedor: number;
   costoClp: number;
+  costoJpy: number;
 }): Promise<void> {
   const supabase = createAdminClient();
 
@@ -47,6 +57,7 @@ export async function registrarCotizacion(input: {
     nombre: input.nombre,
     peso_kg_proveedor: input.pesoKgProveedor,
     costo_clp: input.costoClp,
+    costo_jpy: input.costoJpy,
     veces_cotizado: (existente?.veces_cotizado ?? 0) + 1,
     ultima_cotizacion: ahora,
     updated_at: ahora,
@@ -165,6 +176,7 @@ function mapearFila(fila: {
   peso_kg_proveedor: string | number | null;
   peso_kg_manual: string | number | null;
   costo_clp: string | number | null;
+  costo_jpy: string | number | null;
   veces_cotizado: number;
   primera_cotizacion: string;
   ultima_cotizacion: string;
@@ -176,6 +188,7 @@ function mapearFila(fila: {
     pesoKgProveedor: fila.peso_kg_proveedor === null ? null : Number(fila.peso_kg_proveedor),
     pesoKgManual: fila.peso_kg_manual === null ? null : Number(fila.peso_kg_manual),
     costoClp: fila.costo_clp === null ? null : Number(fila.costo_clp),
+    costoJpy: fila.costo_jpy === null ? null : Number(fila.costo_jpy),
     vecesCotizado: fila.veces_cotizado,
     primeraCotizacion: fila.primera_cotizacion,
     ultimaCotizacion: fila.ultima_cotizacion,
