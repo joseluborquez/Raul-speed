@@ -1,6 +1,6 @@
 // Conversión de moneda (JPY → CLP) y fórmula de negocio.
 
-import { BCENTRAL, FORMULA } from "./config";
+import { BCENTRAL } from "./config";
 
 export interface TipoCambio {
   tasa: number;
@@ -188,13 +188,11 @@ export async function getUsdToClp(): Promise<TipoCambio> {
 // ---------------------------------------------------------------------------
 
 /**
- * Aplica la fórmula de negocio:
- *   precio_base_JPY × tipo_cambio_CLP × multiplicador_1 × multiplicador_2
+ * Convierte el costo en JPY a CLP usando solo la tasa de cambio vigente
+ * (manual o Banco Central) — sin multiplicadores de margen.
  *
  * Retorna el precio final redondeado al entero más cercano en CLP.
  */
 export function calcularPrecioClp(precioJpy: number, tipoCambio: number): number {
-  const precioClp =
-    precioJpy * tipoCambio * FORMULA.multiplicador1 * FORMULA.multiplicador2;
-  return Math.round(precioClp);
+  return Math.round(precioJpy * tipoCambio);
 }
