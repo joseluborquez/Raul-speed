@@ -33,8 +33,14 @@ async function manejarRetorno(request: Request): Promise<Response> {
   }
 
   const estadoActual = await getPedidoEstado(pedidoId);
-  if (estadoActual && estadoActual !== "pendiente") {
-    // Ya se resolvió antes (ej. el usuario recargó la página de retorno).
+  // Solo se salta el commit si el pedido ya llegó a un estado TERMINAL
+  // resuelto (ej. el usuario recargó la página de retorno). "expirado" NO
+  // cuenta como resuelto: el propio getPedidoEstado expira perezosamente a
+  // las 24h, y si el cliente vuelve de Transbank cruzando ese límite hay
+  // que confirmar igual el pago con commit() — de lo contrario Transbank
+  // reversaría la transacción y el pedido quedaría sin honrar (ver la
+  // misma razón en marcarPedidoPagado).
+  if (estadoActual && ["pagado", "fallido", "reembolsado"].includes(estadoActual)) {
     return NextResponse.redirect(destino, 303);
   }
 

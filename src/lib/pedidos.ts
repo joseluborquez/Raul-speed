@@ -90,6 +90,13 @@ export async function crearPedido(input: CrearPedidoInput): Promise<string> {
  * Asigna el método de pago elegido y guarda la referencia del proveedor
  * (preference id / token) antes de redirigir al cliente. Usa el cliente
  * service-role porque no hay policy pública de UPDATE.
+ *
+ * El filtro por estado evita una race benigna: si entre el chequeo de la
+ * ruta /create y este update el pedido se resolvió por otra vía (ej. se
+ * pagó en otra pasarela), no se pisa el metodo_pago del pago real. Se
+ * permite "pendiente" y "expirado" (mismo criterio que marcarPedidoPagado:
+ * un pedido recién expirado todavía puede completar el pago que ya se
+ * estaba iniciando), pero nunca un terminal pagado/fallido/reembolsado.
  */
 export async function asignarMetodoPago(
   pedidoId: string,
@@ -100,7 +107,8 @@ export async function asignarMetodoPago(
   const { error } = await supabase
     .from("pedidos")
     .update({ metodo_pago: metodoPago, proveedor_ref: proveedorRef })
-    .eq("id", pedidoId);
+    .eq("id", pedidoId)
+    .in("estado", ["pendiente", "expirado"]);
 
   if (error) throw new Error(error.message);
 }
@@ -165,9 +173,18 @@ export async function getPedido(pedidoId: string) {
 }
 
 /**
- * Marca un pedido como pagado. Idempotente: si ya estaba pagado, no hace
- * nada (el filtro por estado = 'pendiente' evita que una notificación
- * repetida del proveedor pise datos).
+ * Marca un pedido como pagado. Idempotente: el filtro por estado evita
+ * que una notificación repetida del proveedor pise datos.
+ *
+ * Se aceptan tanto "pendiente" como "expirado": la expiración a las 24h
+ * (haExpirado, aplicada perezosamente en getPedido/getPedidoEstado) solo
+ * sirve para NO iniciar un pago nuevo a un precio congelado que ya es
+ * viejo — las rutas /create la respetan. Pero si el proveedor confirma un
+ * pago REAL (webhook de Flow/MP o commit de Webpay) y el monto capturado
+ * ya se verificó contra total_clp, ese cobro debe honrarse aunque una
+ * lectura previa haya marcado el pedido como expirado; si no, la plata
+ * queda capturada por el proveedor y el pedido atascado en "expirado".
+ * No se acepta "fallido"/"reembolsado" (terminales) ni "pagado" (ya está).
  */
 export async function marcarPedidoPagado(
   pedidoId: string,
@@ -182,7 +199,7 @@ export async function marcarPedidoPagado(
       raw_provider_payload: rawProviderPayload,
     })
     .eq("id", pedidoId)
-    .eq("estado", "pendiente")
+    .in("estado", ["pendiente", "expirado"])
     .select("id");
 
   // Si esto falla (ej. Supabase caído un instante) no puede quedar en

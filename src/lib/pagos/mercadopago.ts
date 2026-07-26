@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 import type { CrearPagoInput, CrearPagoResultado } from "./types";
 
@@ -90,5 +90,11 @@ export function firmaWebhookValida(params: {
     (xRequestId ? `request-id:${xRequestId};` : "") +
     `ts:${ts};`;
   const hash = createHmac("sha256", secret).update(manifest).digest("hex");
-  return hash === v1;
+  // Comparación en tiempo constante: `===` sobre strings filtra por cuánto
+  // coinciden antes de diferir, lo que en teoría deja medir la firma byte a
+  // byte. timingSafeEqual exige buffers del mismo largo (si difieren, ni se
+  // compara — no puede ser la firma correcta).
+  const esperado = Buffer.from(hash);
+  const recibido = Buffer.from(v1);
+  return esperado.length === recibido.length && timingSafeEqual(esperado, recibido);
 }

@@ -12,6 +12,7 @@ import {
 } from "./repuestosCatalogo";
 import {
   clasificarEnvio,
+  nombreIndicaPiezaGrande,
   type ClasificacionEnvio,
   type ConfigFiltroEnvio,
   type DatosClasificacion,
@@ -95,6 +96,14 @@ async function conFiltroPrefijo(
 ): Promise<{ pesoKg: number; clasificacion: ClasificacionEnvio }> {
   const clasificacion = clasificarEnvio(datos, configFiltro, listasFiltro);
   if (clasificacion.resultado !== "alerta_whatsapp") {
+    return { pesoKg: datos.pesoKg, clasificacion };
+  }
+
+  // La alarma por nombre manda: si el catálogo dio un nombre de pieza
+  // grande/pesada (VOLUMINOSAS/PESADAS no neutralizada), no se rescata por
+  // prefijo aunque exista una familia liviana con ese prefijo — un peso
+  // asumido no puede pisar una señal de nombre dura.
+  if (nombreIndicaPiezaGrande(datos, listasFiltro)) {
     return { pesoKg: datos.pesoKg, clasificacion };
   }
 

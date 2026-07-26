@@ -694,6 +694,43 @@ export interface DatosClasificacion {
 }
 
 /**
+ * ¿El NOMBRE indica una pieza grande o pesada de verdad (VOLUMINOSAS o
+ * PESADAS), sin estar neutralizado por subpieza/exclusión/precisión? Es la
+ * señal de nombre "dura": un peso asumido de otra fuente (ej. la tabla de
+ * prefijos livianos) NO debería poder sobreescribirla — si el catálogo
+ * dice "CRANKSHAFT" o "SWINGARM", va a WhatsApp aunque una familia de
+ * prefijo sugiera un peso liviano. Reusa exactamente los pasos 1-3 de
+ * clasificarEnvio() para no divergir del criterio de alarma por nombre.
+ */
+export function nombreIndicaPiezaGrande(
+  datos: Pick<DatosClasificacion, "nombre" | "nombreNativo" | "nombreConfiable">,
+  listas: ListasFiltroEnvio = LISTAS_DEFAULT,
+): boolean {
+  if (datos.nombreConfiable === false) return false;
+  const nombresRaw = [datos.nombre, datos.nombreNativo].filter(
+    (v): v is string => !!v && v.trim() !== "",
+  );
+  const normalizados = nombresRaw.map(normalizar);
+  if (normalizados.length === 0) return false;
+
+  // Neutralizadores (mismo criterio que pasos 1-2 de clasificarEnvio):
+  // PRECISIÓN nunca alarma por nombre; subpieza/exclusión desactivan las
+  // alarmas de nombre.
+  if (algunoCoincideMultiple(normalizados, listas.precision)) return false;
+  if (
+    algunoCoincideMultiple(normalizados, listas.subpiezas) ||
+    algunoCoincideMultiple(normalizados, listas.exclusiones)
+  ) {
+    return false;
+  }
+
+  return (
+    algunoCoincideMultiple(normalizados, listas.voluminosas) ||
+    algunoCoincideMultiple(normalizados, listas.pesadas)
+  );
+}
+
+/**
  * Clasifica el envío de una pieza según el orden de decisión del v10
  * (parar en el primer resultado que aplique): código inválido → PRECISIÓN
  * nunca alarma → subpieza/exclusión desactiva alarmas de nombre (el

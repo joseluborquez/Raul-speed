@@ -55,6 +55,10 @@ export default function CheckoutPage() {
 
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Total autoritativo devuelto por /api/pedidos cuando NO coincide con el
+  // que se mostró en pantalla (ej. el admin cambió la logística entremedio).
+  // Se muestra para que el cliente confirme antes de ir a la pasarela.
+  const [avisoTotal, setAvisoTotal] = useState<number | null>(null);
 
   // Pedido ya creado en un intento de pago anterior con estos mismos datos
   // (carrito + formulario). Si el cliente reintenta con otro método de pago
@@ -112,6 +116,7 @@ export default function CheckoutPage() {
       return;
     setProcesando(true);
     setError(null);
+    setAvisoTotal(null);
 
     try {
       const payloadPedido = JSON.stringify({
@@ -148,6 +153,22 @@ export default function CheckoutPage() {
         }
         pedidoId = dataPedido.pedidoId as string;
         pedidoCreadoRef.current = { payload: payloadPedido, pedidoId };
+
+        // El total autoritativo lo calcula el servidor (re-cotiza precios y
+        // relee la logística). Si difiere del que se mostró en pantalla, se
+        // frena antes de ir a pagar y se muestra el nuevo total: un segundo
+        // clic reutiliza este mismo pedido (pedidoCreadoRef) y continúa.
+        const subtotalCli = carrito.items.reduce(
+          (sum, item) => sum + item.precioRepuestoClp * item.cantidad,
+          0,
+        );
+        const sobrecargoCli = calcularSobrecargoCarrito(carrito.items, configFiltro).extraClp;
+        const totalCli = subtotalCli + sobrecargoCli + carrito.costoLogisticaClp;
+        if (typeof dataPedido.totalClp === "number" && dataPedido.totalClp !== totalCli) {
+          setAvisoTotal(dataPedido.totalClp);
+          setProcesando(false);
+          return;
+        }
       }
 
       const resPago = await fetch(`/api/pagos/${metodo}/create`, {
@@ -443,11 +464,23 @@ export default function CheckoutPage() {
             <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
               Elige cómo pagar
             </div>
+            {avisoTotal !== null && (
+              <div className={styles.envioAlertaBox}>
+                <p className={styles.envioAlertaText}>
+                  El total se actualizó a <strong>${fmt(avisoTotal)} CLP</strong> (cambió el costo
+                  de logística o el precio de algún repuesto). Vuelve a tocar tu método de pago para
+                  continuar con este monto.
+                </p>
+              </div>
+            )}
             <div className={styles.panel}>
               <div className={styles.paymentMethods}>
                 <button
                   className={styles.backLink}
-                  onClick={() => setPaso("form")}
+                  onClick={() => {
+                    setPaso("form");
+                    setAvisoTotal(null);
+                  }}
                   disabled={procesando}
                 >
                   ← Volver a datos de envío
