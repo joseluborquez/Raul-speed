@@ -5,18 +5,15 @@ import type { ItemCotizacion } from "@/lib/carrito";
 import type { ResultadoCotizacion } from "@/lib/cotizar";
 import { EnvioAlertaCard, EnvioEstandarCard } from "./EnvioCards";
 import { fmt, redondearAproximado } from "./format";
-import { InfoBoxes } from "./InfoBoxes";
 import styles from "../page.module.css";
 
 export function Cotizador({
   onCotizado,
   onAgregarAlCarrito,
-  onAbrirSolicitud,
 }: {
   /** Se llama con el costo de logística cada vez que llega una cotización exitosa. */
   onCotizado: (costoLogisticaClp: number) => void;
   onAgregarAlCarrito: (item: ItemCotizacion) => void;
-  onAbrirSolicitud: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -129,10 +126,6 @@ export function Cotizador({
         </p>
       </div>
 
-      {!(resultado && resultado.estado === "ok") && (
-        <InfoBoxes onAbrirSolicitud={onAbrirSolicitud} />
-      )}
-
       <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
         <div className={styles.spinner} />
         <span>Consultando…</span>
@@ -220,9 +213,6 @@ export function Cotizador({
         </div>
       )}
 
-      {resultado && resultado.estado === "ok" && (
-        <InfoBoxes onAbrirSolicitud={onAbrirSolicitud} />
-      )}
     </>
   );
 }

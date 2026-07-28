@@ -7,6 +7,7 @@ import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
 import { useConfigFiltroEnvio } from "@/lib/useConfigFiltroEnvio";
 import { Carrito } from "./_components/Carrito";
 import { Cotizador } from "./_components/Cotizador";
+import { InfoBoxes } from "./_components/InfoBoxes";
 import { SolicitudModal } from "./_components/SolicitudModal";
 import { WhatsAppFloat } from "./_components/WhatsAppFloat";
 import styles from "./page.module.css";
@@ -92,7 +93,6 @@ export default function Home() {
         <Cotizador
           onCotizado={setCostoLogisticaClp}
           onAgregarAlCarrito={agregarAlCarrito}
-          onAbrirSolicitud={() => setMostrarSolicitud(true)}
         />
 
         <Carrito
@@ -103,6 +103,10 @@ export default function Home() {
           onCambiarCantidad={cambiarCantidadItem}
           onProcederAlPago={procederAlPago}
         />
+
+        {/* Avisos de onboarding SIEMPRE debajo del carrito, para que la
+            tarjeta "Repuestos agregados" quede primero al agregar un ítem. */}
+        <InfoBoxes onAbrirSolicitud={() => setMostrarSolicitud(true)} />
       </div>
 
       <footer className={styles.footer}>
