@@ -51,7 +51,6 @@ export default function CheckoutPage() {
 
   const [form, setForm] = useState<FormState>(FORM_INICIAL);
   const [errores, setErrores] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [paso, setPaso] = useState<"form" | "pago">("form");
 
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +103,11 @@ export default function CheckoutPage() {
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  function continuar() {
-    if (validarFormulario()) setPaso("pago");
+  function continuarYPagar() {
+    if (validarFormulario()) pagar();
   }
 
-  async function pagarCon(metodo: "mercadopago" | "webpay" | "flow") {
+  async function pagar() {
     if (
       !carrito ||
       calcularSobrecargoCarrito(carrito.items, configFiltro).resultado === "alerta_whatsapp"
@@ -171,7 +170,7 @@ export default function CheckoutPage() {
         }
       }
 
-      const resPago = await fetch(`/api/pagos/${metodo}/create`, {
+      const resPago = await fetch("/api/pagos/webpay/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedidoId }),
@@ -188,26 +187,22 @@ export default function CheckoutPage() {
       }
 
       // El carrito NO se borra acá: si el pago falla o el cliente se
-      // arrepiente en la pasarela, vuelve con su cotización intacta para
+      // arrepiente en Webpay, vuelve con su cotización intacta para
       // reintentar. Lo borra la página de confirmación al ver el pago
       // aprobado (y sessionStorage muere solo si cierra la pestaña).
-      if (metodo === "webpay") {
-        // Webpay no es un redirect simple: hay que hacer un POST autosubmit
-        // del token hacia la url que entrega Transbank.
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = dataPago.url;
-        const input = document.createElement("input");
-        input.type = "hidden";
-        input.name = "token_ws";
-        input.value = dataPago.token;
-        form.appendChild(input);
-        document.body.appendChild(form);
-        form.submit();
-        return;
-      }
-
-      window.location.href = dataPago.redirectUrl;
+      //
+      // Webpay no es un redirect simple: hay que hacer un POST autosubmit
+      // del token hacia la url que entrega Transbank.
+      const formEl = document.createElement("form");
+      formEl.method = "POST";
+      formEl.action = dataPago.url;
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "token_ws";
+      input.value = dataPago.token;
+      formEl.appendChild(input);
+      document.body.appendChild(formEl);
+      formEl.submit();
     } catch {
       setError("Error de conexión. Intenta nuevamente.");
       setProcesando(false);
@@ -319,7 +314,7 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        {!bloqueadoPorPeso && paso === "form" && (
+        {!bloqueadoPorPeso && (
           <>
             <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
               Datos de envío
@@ -451,60 +446,21 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                <button className={styles.submitBtn} onClick={continuar}>
-                  Continuar al pago
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {!bloqueadoPorPeso && paso === "pago" && (
-          <>
-            <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
-              Elige cómo pagar
-            </div>
-            {avisoTotal !== null && (
-              <div className={styles.envioAlertaBox}>
-                <p className={styles.envioAlertaText}>
-                  El total se actualizó a <strong>${fmt(avisoTotal)} CLP</strong> (cambió el costo
-                  de logística o el precio de algún repuesto). Vuelve a tocar tu método de pago para
-                  continuar con este monto.
-                </p>
-              </div>
-            )}
-            <div className={styles.panel}>
-              <div className={styles.paymentMethods}>
+                {avisoTotal !== null && (
+                  <div className={styles.envioAlertaBox}>
+                    <p className={styles.envioAlertaText}>
+                      El total se actualizó a <strong>${fmt(avisoTotal)} CLP</strong> (cambió el
+                      costo de logística o el precio de algún repuesto). Toca de nuevo para
+                      continuar con este monto.
+                    </p>
+                  </div>
+                )}
                 <button
-                  className={styles.backLink}
-                  onClick={() => {
-                    setPaso("form");
-                    setAvisoTotal(null);
-                  }}
+                  className={styles.submitBtn}
+                  onClick={continuarYPagar}
                   disabled={procesando}
                 >
-                  ← Volver a datos de envío
-                </button>
-                <button
-                  className={styles.paymentBtn}
-                  disabled={procesando}
-                  onClick={() => pagarCon("mercadopago")}
-                >
-                  Mercado Pago
-                </button>
-                <button
-                  className={styles.paymentBtn}
-                  disabled={procesando}
-                  onClick={() => pagarCon("webpay")}
-                >
-                  Webpay
-                </button>
-                <button
-                  className={styles.paymentBtn}
-                  disabled={procesando}
-                  onClick={() => pagarCon("flow")}
-                >
-                  Flow
+                  {procesando ? "Redirigiendo…" : "Pagar"}
                 </button>
               </div>
             </div>

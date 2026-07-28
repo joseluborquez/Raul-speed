@@ -234,59 +234,6 @@
   color: var(--texto-muted);
 }
 
-/* Métodos de pago */
-.paymentMethods {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.paymentBtn {
-  width: 100%;
-  background: var(--negro-input);
-  color: var(--blanco);
-  border: 1px solid var(--borde);
-  padding: 16px;
-  font-family: inherit;
-  font-size: var(--fs-base);
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.paymentBtn:hover {
-  border-color: var(--rojo);
-  color: var(--rojo);
-}
-.paymentBtn:disabled {
-  cursor: not-allowed;
-  color: var(--texto-muted);
-  opacity: 0.6;
-}
-.paymentBtnSoon {
-  font-size: var(--fs-3xs);
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--texto-muted);
-  border: 1px solid var(--borde);
-  padding: 3px 8px;
-}
-.backLink {
-  align-self: flex-start;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--texto-muted);
-  text-decoration: underline;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-}
-
 .errorBox {
   background: rgba(127, 29, 29, 0.15);
   border: 1px solid #7f1d1d;
@@ -362,9 +309,6 @@
   .fieldRow {
     flex-direction: column;
     gap: 16px;
-  }
-  .paymentMethods {
-    padding: 18px;
   }
   .summaryItem {
     padding: 12px 16px;
