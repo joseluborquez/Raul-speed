@@ -79,6 +79,18 @@ export default function CheckoutPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
+  // Si el usuario aprieta "atrás" desde Webpay, el navegador puede restaurar
+  // esta página desde el bfcache con el estado JS congelado (procesando =
+  // true), dejando el botón "Pagar" atascado en "Redirigiendo…". pageshow
+  // con `persisted` detecta esa restauración y rehabilita el botón.
+  useEffect(() => {
+    const alRestaurar = (event: PageTransitionEvent) => {
+      if (event.persisted) setProcesando(false);
+    };
+    window.addEventListener("pageshow", alRestaurar);
+    return () => window.removeEventListener("pageshow", alRestaurar);
+  }, []);
+
   function setCampo(campo: keyof FormState, valor: string) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
