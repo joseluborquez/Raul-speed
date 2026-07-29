@@ -79,7 +79,7 @@ export default function CheckoutPage() {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Si el usuario aprieta "atrás" desde Webpay, el navegador puede restaurar
+  // Si el usuario aprieta "atrás" desde Flow, el navegador puede restaurar
   // esta página desde el bfcache con el estado JS congelado (procesando =
   // true), dejando el botón "Pagar" atascado en "Redirigiendo…". pageshow
   // con `persisted` detecta esa restauración y rehabilita el botón.
@@ -182,7 +182,7 @@ export default function CheckoutPage() {
         }
       }
 
-      const resPago = await fetch("/api/pagos/webpay/create", {
+      const resPago = await fetch("/api/pagos/flow/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pedidoId }),
@@ -199,22 +199,12 @@ export default function CheckoutPage() {
       }
 
       // El carrito NO se borra acá: si el pago falla o el cliente se
-      // arrepiente en Webpay, vuelve con su cotización intacta para
+      // arrepiente en Flow, vuelve con su cotización intacta para
       // reintentar. Lo borra la página de confirmación al ver el pago
       // aprobado (y sessionStorage muere solo si cierra la pestaña).
       //
-      // Webpay no es un redirect simple: hay que hacer un POST autosubmit
-      // del token hacia la url que entrega Transbank.
-      const formEl = document.createElement("form");
-      formEl.method = "POST";
-      formEl.action = dataPago.url;
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = "token_ws";
-      input.value = dataPago.token;
-      formEl.appendChild(input);
-      document.body.appendChild(formEl);
-      formEl.submit();
+      // Flow es un redirect simple por GET a la url que devuelve su API.
+      window.location.href = dataPago.redirectUrl;
     } catch {
       setError("Error de conexión. Intenta nuevamente.");
       setProcesando(false);
