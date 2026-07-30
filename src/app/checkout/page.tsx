@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CARRITO_STORAGE_KEY, type CarritoStorage } from "@/lib/carrito";
-import { METODO_ENVIO_LABELS } from "@/lib/metodoEnvio";
+import { empresaEnvio, METODO_ENVIO_LABELS, tipoEntrega } from "@/lib/metodoEnvio";
 import { validarRut } from "@/lib/rut";
 import { calcularSobrecargoCarrito } from "@/lib/sobrecargoEnvio";
 import { useConfigFiltroEnvio } from "@/lib/useConfigFiltroEnvio";
@@ -17,6 +17,47 @@ const OPCIONES_ENVIO = Object.entries(METODO_ENVIO_LABELS).map(([value, label]) 
   value,
   label,
 }));
+
+// El campo "dirección" significa cosas distintas según cómo se entregue el
+// pedido: a domicilio es la del cliente, en retiro es la de la sucursal del
+// courier, y con retiro en Tomé es solo un dato de contacto (la tienda es
+// nuestra y su dirección ya la sabemos).
+function copyDireccion(metodoEnvio: string): {
+  label: string;
+  placeholder: string;
+  hint: string | null;
+} {
+  const empresa = empresaEnvio(metodoEnvio);
+
+  switch (tipoEntrega(metodoEnvio)) {
+    case "domicilio":
+      return {
+        label: "Dirección de tu domicilio (calle, número y depto)",
+        placeholder: "Av. Libertad 1234, depto 302",
+        hint: `Acá te entrega el paquete ${empresa ?? "la empresa de envío"}.`,
+      };
+    case "sucursal":
+      return {
+        label: empresa
+          ? `Dirección de la sucursal ${empresa} donde retirarás`
+          : "Dirección de la sucursal donde retirarás",
+        placeholder: "Sucursal Centro, Av. O'Higgins 456",
+        hint: "Región, ciudad y comuna deben ser las de esa sucursal.",
+      };
+    case "tienda":
+      return {
+        label: "Dirección de contacto (calle, número y depto)",
+        placeholder: "Av. Libertad 1234, depto 302",
+        hint: "Retiras en nuestra tienda de Tomé — esta dirección es solo para contactarte.",
+      };
+    default:
+      return {
+        label: "Dirección completa (tu domicilio o la sucursal de retiro)",
+        placeholder: "Calle, número y depto",
+        hint: null,
+      };
+  }
+}
 
 interface FormState {
   nombreCompleto: string;
@@ -243,6 +284,7 @@ export default function CheckoutPage() {
   const sobrecargoClp = clasificacionCarrito.extraClp;
   const bloqueadoPorPeso = clasificacionCarrito.resultado === "alerta_whatsapp";
   const total = subtotalRepuestos + sobrecargoClp + carrito.costoLogisticaClp;
+  const direccionCopy = copyDireccion(form.metodoEnvio);
 
   return (
     <>
@@ -376,7 +418,17 @@ export default function CheckoutPage() {
                   <select
                     id="metodoEnvio"
                     value={form.metodoEnvio}
-                    onChange={(e) => setCampo("metodoEnvio", e.target.value)}
+                    onChange={(e) => {
+                      // Cambiar entre domicilio y retiro cambia qué dirección
+                      // se pide, así que la anterior se descarta en vez de
+                      // viajar como si fuera la nueva.
+                      const valor = e.target.value;
+                      setForm((prev) =>
+                        tipoEntrega(prev.metodoEnvio) === tipoEntrega(valor)
+                          ? { ...prev, metodoEnvio: valor }
+                          : { ...prev, metodoEnvio: valor, direccion: "" },
+                      );
+                    }}
                   >
                     <option value="">Selecciona una opción</option>
                     {OPCIONES_ENVIO.map((op) => (
@@ -435,14 +487,16 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className={`${styles.field} ${errores.direccion ? styles.hasError : ""}`}>
-                  <label htmlFor="direccion">
-                    Dirección completa (calle, número y depto o nombre de oficina de retiro)
-                  </label>
+                  <label htmlFor="direccion">{direccionCopy.label}</label>
                   <input
                     id="direccion"
+                    placeholder={direccionCopy.placeholder}
                     value={form.direccion}
                     onChange={(e) => setCampo("direccion", e.target.value)}
                   />
+                  {direccionCopy.hint && (
+                    <span className={styles.fieldHint}>{direccionCopy.hint}</span>
+                  )}
                   {errores.direccion && (
                     <span className={styles.fieldError}>{errores.direccion}</span>
                   )}

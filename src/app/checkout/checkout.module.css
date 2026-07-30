@@ -209,6 +209,11 @@
   font-weight: 600;
   color: #f87171;
 }
+.fieldHint {
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--texto-muted);
+}
 
 .submitBtn {
   width: 100%;
