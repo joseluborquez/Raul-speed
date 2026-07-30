@@ -1,4 +1,5 @@
 import { createAdminClient } from "./supabase/admin";
+import type { EstadoGestion } from "./estadoGestion";
 import type { MetodoEnvio } from "./metodoEnvio";
 
 export type { MetodoEnvio } from "./metodoEnvio";
@@ -278,6 +279,45 @@ export async function marcarPedidoReembolsado(
       { pedidoId },
     );
   }
+}
+
+/**
+ * Anota en qué va la gestión del pedido (encargado, en tránsito,
+ * entregado…). Es una columna aparte del `estado` de pago justamente
+ * para que ningún webhook de pasarela la pise, y al revés: cambiar el
+ * seguimiento nunca altera si el pedido está pagado o no.
+ */
+export async function actualizarEstadoGestion(
+  pedidoId: string,
+  estadoGestion: EstadoGestion,
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .update({ estado_gestion: estadoGestion })
+    .eq("id", pedidoId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Pedido no encontrado");
+}
+
+/**
+ * Borra un pedido del panel. Es destructivo y sin papelera: un pedido
+ * pagado es el único registro propio de un cobro real (el payload del
+ * proveedor incluido), así que la ruta que llama a esto exige
+ * confirmación explícita para esos casos.
+ */
+export async function eliminarPedido(pedidoId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("pedidos")
+    .delete()
+    .eq("id", pedidoId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Pedido no encontrado");
 }
 
 /**

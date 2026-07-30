@@ -412,6 +412,70 @@
   border-color: #5b21b6;
   background: rgba(91, 33, 182, 0.2);
 }
+/* Seguimiento manual: no compite con el badge de estado de pago. */
+.badge.neutral {
+  color: var(--texto-muted);
+  border-color: var(--borde);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Seguimiento y acciones del panel */
+.estadoSelect {
+  background: var(--negro-input);
+  border: 1px solid var(--borde);
+  color: var(--texto-claro);
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.estadoSelect:focus {
+  border-color: var(--rojo);
+}
+.estadoSelect:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.accionesRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px 0;
+}
+.btnEliminar {
+  background: transparent;
+  border: 1px solid #7f1d1d;
+  color: #fca5a5;
+  font-family: inherit;
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 9px 18px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.btnEliminar:hover:not(:disabled) {
+  background: #7f1d1d;
+  color: var(--blanco);
+}
+.btnEliminar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.accionError {
+  margin: 0 24px 12px;
+  border: 1px solid #7f1d1d;
+  background: rgba(127, 29, 29, 0.15);
+  color: #fca5a5;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  padding: 10px 14px;
+}
 
 /* Pedidos */
 .pedidoRow {

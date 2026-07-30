@@ -1,4 +1,5 @@
 import { createAdminClient } from "./supabase/admin";
+import type { EstadoSolicitud } from "./estadoGestion";
 
 export interface CrearSolicitudInput {
   nombreApellido: string;
@@ -31,6 +32,39 @@ export async function crearSolicitud(input: CrearSolicitudInput): Promise<string
 
   if (error || !data) throw new Error(error?.message ?? "No se pudo enviar la solicitud");
   return data.id as string;
+}
+
+/**
+ * Anota en qué va la solicitud (buscando, cotizada, respondida…). Lo
+ * escribe solo el admin desde el panel; el formulario público únicamente
+ * inserta, así que nada más toca esta columna.
+ */
+export async function actualizarEstadoSolicitud(
+  solicitudId: string,
+  estado: EstadoSolicitud,
+): Promise<void> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("solicitudes_parte")
+    .update({ estado })
+    .eq("id", solicitudId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Solicitud no encontrada");
+}
+
+/** Borra una solicitud del panel. Destructivo y sin papelera. */
+export async function eliminarSolicitud(solicitudId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("solicitudes_parte")
+    .delete()
+    .eq("id", solicitudId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Solicitud no encontrada");
 }
 
 /**
