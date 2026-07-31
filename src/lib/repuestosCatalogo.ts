@@ -5,7 +5,32 @@
 // entra solo si viene en 0 (ver cotizar()). La precedencia era al revés
 // mientras el proveedor era Yumbo, que no traía peso nunca; Impex sí.
 
+import { tieneJapones } from "./sobrecargoEnvio";
 import { createAdminClient } from "./supabase/admin";
+
+/**
+ * ¿Hay que conservar el nombre ya guardado en vez del que trae el
+ * proveedor? Sí cuando el del proveedor viene en japonés y el guardado no.
+ *
+ * Impex devuelve muchos nombres solo en katakana, y como
+ * registrarCotizacion() corre en CADA cotización, sin este freno el
+ * catálogo se degrada solo: "SEAL" pasa a "ｼ-ﾙ" y
+ * "Cowling,cnt,rh,l.gree" a "ｶｳﾘﾝｸﾞ.CNT.RH.ｸﾞﾘ-ﾝ". Con los precios el
+ * refresco constante es justo lo que se quiere; con los nombres, lo que
+ * ya estaba puede ser mejor que lo que llega.
+ *
+ * Solo frena el caso claro (latino → japonés). Un nombre en japonés que
+ * llega para reemplazar otro en japonés, o cualquier cosa que llegue a una
+ * fila sin nombre, se escribe normal.
+ */
+export function conservarNombreGuardado(
+  nombreProveedor: string,
+  nombreGuardado: string | null | undefined,
+): boolean {
+  const guardado = nombreGuardado?.trim();
+  if (!guardado) return false;
+  return tieneJapones(nombreProveedor) && !tieneJapones(guardado);
+}
 
 export interface RepuestoCatalogo {
   partNumber: string;
@@ -59,7 +84,7 @@ export async function registrarCotizacion(input: {
 
   const { data: existente } = await supabase
     .from("repuestos_catalogo")
-    .select("veces_cotizado")
+    .select("veces_cotizado, nombre")
     .eq("part_number", input.partNumber)
     .maybeSingle();
 
@@ -68,7 +93,6 @@ export async function registrarCotizacion(input: {
   const { error } = await supabase.from("repuestos_catalogo").upsert({
     part_number: input.partNumber,
     maker: input.maker,
-    nombre: input.nombre,
     costo_clp: input.costoClp,
     costo_jpy: input.costoJpy,
     veces_cotizado: (existente?.veces_cotizado ?? 0) + 1,
@@ -77,6 +101,9 @@ export async function registrarCotizacion(input: {
     // Solo cuando el proveedor mandó un peso real — ver el comentario de
     // arriba. Omitir la columna es lo que evita que un 0 pise el dato bueno.
     ...(input.pesoKgProveedor > 0 ? { peso_kg_proveedor: input.pesoKgProveedor } : {}),
+    ...(conservarNombreGuardado(input.nombre, existente?.nombre)
+      ? {}
+      : { nombre: input.nombre }),
   });
 
   if (error) throw new Error(error.message);

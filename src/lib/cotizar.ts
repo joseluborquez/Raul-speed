@@ -5,6 +5,7 @@ import { cargarFiltroEnvio } from "./filtroEnvioConfig";
 import { buscarImpex } from "./impex";
 import { buscarPesoPorPrefijo, registrarUsoPrefijo } from "./prefijosLivianos";
 import {
+  conservarNombreGuardado,
   DATOS_CATALOGO_DEFAULT,
   getDatosCatalogo,
   registrarCotizacion,
@@ -323,8 +324,20 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   // Nombre real solo se muestra al cliente si es confiable (inglés,
   // evaluable contra las listas de alarma). Si no, se oculta pero se sigue
   // guardando el real en el catálogo — ver registrarCotizacion() abajo.
+  //
+  // Cuando Impex manda el nombre solo en katakana pero el catálogo tiene
+  // uno en alfabeto latino, gana el del catálogo: al cliente chileno "SEAL"
+  // le dice algo y "ｼ-ﾙ" no. Misma regla que conservarNombreGuardado() usa
+  // para no degradar la fila; acá aplicada a lo que se muestra. Sin esto,
+  // invertir el orden (proveedor antes que catálogo) empeoró nombres que
+  // antes se veían bien, porque el atajo del catálogo ya no los servía.
+  const nombreCatalogo = datosCatalogo.nombre?.trim() || null;
+  const nombreMostrable =
+    nombreCatalogo && conservarNombreGuardado(resultadoProveedor.nombre, nombreCatalogo)
+      ? nombreCatalogo
+      : resultadoProveedor.nombre;
   const nombreParaCliente = datosCatalogo.nombreConfiable
-    ? resultadoProveedor.nombre
+    ? nombreMostrable
     : `Repuesto original [${partNumber}]`;
 
   // 2. Obtener tipo de cambio JPY → CLP.

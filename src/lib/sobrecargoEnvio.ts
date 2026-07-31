@@ -541,6 +541,23 @@ const KANA_GRANDE = "アイウエオヤユヨツワ";
 export const RE_JAPONES = /[぀-ヿ一-鿿]/;
 
 /**
+ * ¿El texto está escrito en japonés (kana o kanji)?
+ *
+ * El NFKC previo NO es opcional: Impex devuelve muchos nombres en katakana
+ * HALF-WIDTH ("ｼ-ﾙ", "ﾎﾞﾙﾄ", "ｳｴｲﾄ"), que cae en el bloque U+FF66-FF9D y
+ * que RE_JAPONES no matchea en crudo. NFKC lo pasa a full-width, que es lo
+ * que RE_JAPONES sí detecta — mismo pre-paso que hace
+ * normalizarParaGuardar() en filtroEnvioConfig.ts.
+ *
+ * Ojo con la alternativa ingenua de "¿tiene letras latinas?": no sirve,
+ * porque estos nombres las mezclan ("ｶｳﾘﾝｸﾞ.CNT.RH.ｸﾞﾘ-ﾝ" trae CNT y RH
+ * dentro de puro katakana).
+ */
+export function tieneJapones(texto: string | null | undefined): boolean {
+  return RE_JAPONES.test((texto ?? "").normalize("NFKC"));
+}
+
+/**
  * Normalización obligatoria antes de comparar: los catálogos OEM escriben
  * los nombres invertidos y con signos ("DISC,FR BRAKE", "PIPE-EXHAUST",
  * "COVER, R. SIDE"). Sin esto, las alarmas nunca coincidirían. NFKC +
