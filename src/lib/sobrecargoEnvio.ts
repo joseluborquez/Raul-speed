@@ -2,7 +2,9 @@
 // calidad del dato). Versión v10 (ver Filtros_Cotizador_FINAL_v10.PDF):
 // calibrada contra los 63.542 pesos reales de la Base Madre y verificada
 // dos veces en vivo contra 49 códigos reales en Yumbo (el documento la
-// llama "Jumbo" por un typo — es el mismo proveedor de src/lib/yumbo.ts).
+// llama "Jumbo" por un typo). Yumbo ya no es el proveedor —hoy es Impex,
+// ver src/lib/impex.ts— pero la calibración sigue siendo válida: lo que
+// se midió fue el catálogo OEM japonés, no la API que lo sirve.
 //
 // Tres cosas que la verificación real confirmó:
 // - Yumbo casi nunca trae peso (0 de 49 códigos en la verificación) — el
@@ -675,7 +677,7 @@ function extraAutomatico(pesoKg: number, leyenda: string, config: ConfigFiltroEn
 export interface DatosClasificacion {
   nombre: string;
   /** Nombre nativo del proveedor (japonés/katakana), cuando viene distinto
-   * del inglés en `nombre` — ver buscarYumbo() en yumbo.ts. Se evalúa junto
+   * del inglés en `nombre` — ver buscarImpex() en impex.ts. Se evalúa junto
    * a `nombre` y se toma el resultado más restrictivo: un código puede
    * venir SOLO en katakana sin versión en inglés. */
   nombreNativo?: string | null;

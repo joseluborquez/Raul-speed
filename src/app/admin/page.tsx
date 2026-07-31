@@ -8,6 +8,19 @@ import type { ResultadoCotizacion } from "@/lib/cotizar";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./admin.module.css";
 
+/** Respuesta de /api/admin/proveedor. */
+interface EstadoProveedorApi {
+  proveedor: string;
+  cuota: { usadas: number; limite: number; restantes: number; dia: string };
+  circuito: {
+    pausado: boolean;
+    pausadoHasta: string | null;
+    fallosConsecutivos: number;
+    ultimoEstado: number | null;
+    ultimoMensaje: string | null;
+  };
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const partInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +39,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<ResultadoCotizacion | null>(null);
   const [error, setError] = useState<{ title: string; msg: string } | null>(null);
+
+  const [proveedor, setProveedor] = useState<EstadoProveedorApi | null>(null);
 
   // No resetea a "Cargando…" acá: ese es el estado inicial del useState, y
   // así el effect de carga inicial no hace ningún setState síncrono. El
@@ -143,6 +158,16 @@ export default function AdminPage() {
     setManualGuardando(false);
   }
 
+  async function cargarProveedor() {
+    try {
+      const r = await fetch("/api/admin/proveedor");
+      if (!r.ok) return;
+      setProveedor(await r.json());
+    } catch {
+      // el panel sigue usable sin este dato.
+    }
+  }
+
   async function cerrarSesion() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -157,6 +182,7 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarTasa();
     cargarSettings();
+    cargarProveedor();
   }, []);
 
   async function buscar() {
@@ -188,6 +214,9 @@ export default function AdminPage() {
     }
 
     setLoading(false);
+    // La cotización pudo haber gastado cuota (o abierto el circuito), así
+    // que el contador de arriba se refresca en vez de quedar viejo.
+    cargarProveedor();
     if (data.estado === "ok") {
       setResultado(data);
     } else if (data.estado === "no_encontrado") {
@@ -324,6 +353,56 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Estado del proveedor de precios */}
+        <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>
+          Proveedor de Precios
+        </div>
+        <div className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <span>Impex Japan · cuota diaria</span>
+            <span
+              className={`${styles.tcModeIndicator} ${
+                proveedor?.circuito.pausado ? styles.manual : styles.auto
+              }`}
+            >
+              {proveedor?.circuito.pausado ? "Pausado" : "Activo"}
+            </span>
+          </div>
+          <div className={styles.tcBody}>
+            <div className={styles.tcAutoRow}>
+              <div className={styles.tcAutoInfo}>
+                <span className={styles.tcAutoLabel}>Consultas de hoy</span>
+                <span className={styles.tcAutoValue}>
+                  {proveedor
+                    ? `${proveedor.cuota.usadas} / ${proveedor.cuota.limite}`
+                    : "Cargando…"}
+                </span>
+                <span className={styles.tcAutoFuente}>
+                  {proveedor
+                    ? `Quedan ${proveedor.cuota.restantes} · el día corta a medianoche JST (${proveedor.cuota.dia})`
+                    : "—"}
+                </span>
+              </div>
+              <button className={styles.btnRefreshTasa} onClick={cargarProveedor}>
+                Actualizar
+              </button>
+            </div>
+            {proveedor && proveedor.cuota.restantes === 0 && (
+              <span className={styles.tcAutoFuente}>
+                Cuota agotada — las cotizaciones se están sirviendo con el último precio
+                guardado en el catálogo, no con precio fresco de Impex.
+              </span>
+            )}
+            {proveedor?.circuito.pausado && (
+              <span className={styles.tcAutoFuente}>
+                Pausado hasta{" "}
+                {new Date(proveedor.circuito.pausadoHasta ?? "").toLocaleString("es-CL")} ·
+                último error: {proveedor.circuito.ultimoMensaje ?? "—"}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Buscador */}
         <div className={`${styles.sectionLabel} ${styles.sectionLabelSpaced}`}>Búsqueda</div>
         <div className={styles.panel}>
@@ -348,7 +427,7 @@ export default function AdminPage() {
 
         <div className={`${styles.loader} ${loading ? styles.visible : ""}`}>
           <div className={styles.spinner} />
-          <span>Consultando Yumbo Japan…</span>
+          <span>Consultando proveedor de precios…</span>
         </div>
 
         {error && (

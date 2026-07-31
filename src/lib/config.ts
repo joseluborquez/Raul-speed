@@ -1,7 +1,11 @@
 // Configuración principal — leer valores sensibles desde variables de entorno.
 // Ver .env.example para las claves requeridas.
 
-export const YUMBO_API_KEY = process.env.YUMBO_API_KEY ?? "";
+// Impex Japan — única fuente de precios en vivo. La key se obtiene en el
+// perfil web (https://en.impex-jp.com/user/profile/api-keys.html); el
+// correo y la contraseña de esa cuenta no los usa el código, solo sirven
+// para entrar al panel a ver el consumo o regenerar la key.
+export const IMPEX_API_KEY = process.env.IMPEX_API_KEY ?? "";
 
 // Banco Central de Chile — API de tipo de cambio.
 // Registro gratuito: https://si3.bcentral.cl/estadisticas/Principal1/Web/BancoCentralAboutNosotros/registroUsuariosBCCH/index.php

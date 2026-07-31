@@ -21,17 +21,30 @@ export interface RepuestoCatalogo {
 
 /**
  * Registra o actualiza un repuesto en el catálogo tras una cotización
- * exitosa vía Yumbo. No incluye peso_kg_manual ni primera_cotizacion en
- * el upsert a propósito: Postgres solo pisa las columnas listadas en ON
- * CONFLICT DO UPDATE, así que el peso que el admin ya haya cargado queda
- * intacto.
+ * exitosa vía Impex. Corre en CADA cotización que llega al proveedor (ver
+ * cotizar.ts), así que es lo que mantiene fresco el precio y el peso de la
+ * base: costo_jpy/costo_clp quedan con el último valor real de Impex, y
+ * eso es lo que cotizarDesdeCatalogo() sirve cuando el proveedor no está
+ * disponible.
  *
- * costoJpy queda guardado en costo_jpy: la próxima vez que se cotice este
- * mismo N° de parte, getDatosCatalogo() lo lee y cotizarDesdeCatalogo()
- * lo usa directo (recalculado con la tasa vigente) sin volver a llamar a
- * Yumbo — así un código consultado una vez "se gradúa" al catálogo
- * interno. costoClp queda además como snapshot informativo (se muestra en
- * /admin/repuestos) pero ya no es lo que decide el atajo del catálogo.
+ * Qué NO pisa, y por qué:
+ *
+ * - peso_kg_manual y primera_cotizacion no van en el upsert. Postgres solo
+ *   escribe las columnas listadas en ON CONFLICT DO UPDATE, así que el
+ *   peso que el admin cargó a mano queda intacto y sigue teniendo
+ *   prioridad sobre el del proveedor (ver getDatosCatalogo()).
+ *
+ * - peso_kg_proveedor se omite del upsert cuando el proveedor no mandó
+ *   peso. Impex casi nunca lo trae (ver la nota de
+ *   0004_repuestos_catalogo.sql), y en ese caso llega como 0: escribirlo
+ *   borraría con un 0 el peso que sí trajo una cotización anterior. Antes
+ *   esto era casi inocuo porque la función corría una sola vez por código;
+ *   ahora que corre en cada cotización, sería un destructor de datos — y
+ *   sin peso, clasificarEnvio() pierde 3 de sus 5 pasos y todo cae a
+ *   clasificar solo por precio.
+ *
+ * El precio no necesita ese cuidado: impexApiFetch() descarta las partes
+ * con price_yen <= 0, así que si se llegó hasta acá el costo es real.
  */
 export async function registrarCotizacion(input: {
   partNumber: string;
@@ -55,23 +68,25 @@ export async function registrarCotizacion(input: {
     part_number: input.partNumber,
     maker: input.maker,
     nombre: input.nombre,
-    peso_kg_proveedor: input.pesoKgProveedor,
     costo_clp: input.costoClp,
     costo_jpy: input.costoJpy,
     veces_cotizado: (existente?.veces_cotizado ?? 0) + 1,
     ultima_cotizacion: ahora,
     updated_at: ahora,
+    // Solo cuando el proveedor mandó un peso real — ver el comentario de
+    // arriba. Omitir la columna es lo que evita que un 0 pise el dato bueno.
+    ...(input.pesoKgProveedor > 0 ? { peso_kg_proveedor: input.pesoKgProveedor } : {}),
   });
 
   if (error) throw new Error(error.message);
 }
 
 /**
- * Solo incrementa veces_cotizado/ultima_cotizacion — para el atajo de
- * cotizarDesdeCatalogo() en cotizar.ts, cuando el precio ya vino del
- * catálogo (costo_jpy) y no hay nada nuevo que registrar de Yumbo. A
- * diferencia de registrarCotizacion(), NO toca maker/nombre/
- * peso_kg_proveedor/costo_clp — esos campos no tienen un valor "de
+ * Solo incrementa veces_cotizado/ultima_cotizacion — para el respaldo de
+ * cotizarDesdeCatalogo() en cotizar.ts, cuando Impex no estuvo disponible
+ * y el precio salió del catálogo, así que no hay nada nuevo que registrar
+ * del proveedor. A diferencia de registrarCotizacion(), NO toca maker/
+ * nombre/peso_kg_proveedor/costo_clp — esos campos no tienen un valor "de
  * proveedor" en este camino y pisarlos correría el riesgo de dañar el
  * dato importado (ej. peso_kg_proveedor en 0 sin ser real).
  */
@@ -113,14 +128,14 @@ export interface DatosCatalogo {
   /** Texto de la columna Fuente_Peso, si existe. */
   fuentePeso: string | null;
   /**
-   * Costo en JPY del catálogo interno (re-importado, cobertura mayor que
-   * el antiguo precio_venta_clp). No null = cotizar() cotiza directo desde
-   * acá y ni siquiera llama a Yumbo (ver cotizarDesdeCatalogo() en
-   * cotizar.ts) — pero SÍ pasa por calcularPrecioClp() con la tasa vigente
-   * (manual o Banco Central), igual que el camino de Yumbo, para que la
-   * tasa manual del admin afecte estos precios tal como los demás. A
-   * diferencia del viejo precio_venta_clp (que era ya un CLP final
-   * congelado al momento del import), este es un costo en JPY: se
+   * Costo en JPY del catálogo interno: el de la última cotización que
+   * alcanzó a Impex, o el del import inicial si nunca se cotizó. No null =
+   * hay respaldo utilizable si Impex no responde (ver
+   * cotizarDesdeCatalogo() en cotizar.ts). Pasa por calcularPrecioClp()
+   * con la tasa vigente (manual o Banco Central), igual que el camino de
+   * Impex, para que la tasa manual del admin afecte estos precios tal como
+   * los demás. A diferencia del viejo precio_venta_clp (que era ya un CLP
+   * final congelado al momento del import), este es un costo en JPY: se
    * recalcula en cada cotización.
    */
   costoJpy: number | null;
@@ -140,13 +155,13 @@ export const DATOS_CATALOGO_DEFAULT: DatosCatalogo = {
 
 /**
  * Datos de calidad/peso/precio cargados para este N° de parte, si existe
- * en el catálogo. Se llama desde cotizar() — si costoJpy no es null,
- * cotizar() ni siquiera llama a Yumbo (ver cotizarDesdeCatalogo()); si es
- * null, sigue el flujo de siempre y solo se usan peso/oemValido/
- * nombreConfiable/fuentePeso para clasificarEnvio(). Sin fila en el
- * catálogo, se asume permisivo (válido, confiable, sin peso ni costo
- * propio) en vez de bloquear algo que no está marcado explícitamente
- * como problemático.
+ * en el catálogo. cotizar() lo llama siempre, antes de ir a Impex, y usa
+ * el resultado para dos cosas: peso/oemValido/nombreConfiable/fuentePeso
+ * alimentan clasificarEnvio() aunque el precio venga del proveedor, y
+ * costoJpy (si no es null) queda como respaldo por si Impex no responde.
+ * Sin fila en el catálogo se asume permisivo (válido, confiable, sin peso
+ * ni costo propio) en vez de bloquear algo que no está marcado
+ * explícitamente como problemático.
  */
 export async function getDatosCatalogo(partNumber: string): Promise<DatosCatalogo> {
   const supabase = createAdminClient();

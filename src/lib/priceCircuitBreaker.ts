@@ -80,6 +80,46 @@ export async function recordFailure(
   });
 }
 
+export interface EstadoProveedor extends EstadoCircuito {
+  fallosConsecutivos: number;
+  ultimoEstado: number | null;
+  ultimoMensaje: string | null;
+}
+
+/**
+ * Estado completo del circuito para mostrarlo en /admin. isPaused() solo
+ * responde "¿puedo llamar?"; acá interesa además POR QUÉ está pausado —
+ * un "contact with manager" en ultimoMensaje es la firma del bloqueo a
+ * IPs de datacenter, y distinguirlo de un timeout cambia qué hacer.
+ */
+export async function estadoProveedor(provider: string): Promise<EstadoProveedor> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("price_circuit_breaker")
+    .select("paused_until, consecutive_fails, last_status, last_message")
+    .eq("provider", provider)
+    .maybeSingle();
+
+  if (error || !data) {
+    return {
+      pausado: false,
+      pausadoHasta: null,
+      fallosConsecutivos: 0,
+      ultimoEstado: null,
+      ultimoMensaje: null,
+    };
+  }
+
+  const hasta = data.paused_until ? new Date(data.paused_until) : null;
+  return {
+    pausado: hasta !== null && hasta.getTime() > Date.now(),
+    pausadoHasta: hasta,
+    fallosConsecutivos: data.consecutive_fails ?? 0,
+    ultimoEstado: data.last_status,
+    ultimoMensaje: data.last_message,
+  };
+}
+
 export async function recordSuccess(provider: string): Promise<void> {
   const supabase = createAdminClient();
   await supabase.from("price_circuit_breaker").upsert({

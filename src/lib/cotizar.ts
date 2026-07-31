@@ -2,6 +2,7 @@
 
 import { calcularPrecioClp, getJpyToClp } from "./calculator";
 import { cargarFiltroEnvio } from "./filtroEnvioConfig";
+import { buscarImpex } from "./impex";
 import { buscarPesoPorPrefijo, registrarUsoPrefijo } from "./prefijosLivianos";
 import {
   DATOS_CATALOGO_DEFAULT,
@@ -20,7 +21,6 @@ import {
   type ResultadoEnvio,
 } from "./sobrecargoEnvio";
 import { getSettings } from "./settings";
-import { buscarYumbo } from "./yumbo";
 
 export interface ResultadoCotizacion {
   partNumber: string;
@@ -141,10 +141,15 @@ async function conFiltroPrefijo(
 }
 
 /**
- * Costo del catálogo interno en JPY (re-importado — ver getDatosCatalogo()
- * en repuestosCatalogo.ts): pasa por la misma fórmula de negocio y tasa
- * de cambio vigente (manual o Banco Central) que el camino de Yumbo, así
- * que reacciona igual a un cambio de tasa manual del admin.
+ * RESPALDO: costo del catálogo interno en JPY (ver getDatosCatalogo() en
+ * repuestosCatalogo.ts). Se usa cuando Impex no está disponible — no
+ * cuando responde que la pieza no existe, ver cotizar() más abajo.
+ *
+ * Pasa por la misma fórmula de negocio y la misma tasa de cambio vigente
+ * (manual o Banco Central) que el camino de Impex, así que reacciona igual
+ * a un cambio de tasa manual del admin. Lo único distinto es de cuándo es
+ * el costo en JPY: acá es el de la última cotización que sí alcanzó a
+ * Impex (o el del import inicial).
  */
 async function cotizarDesdeCatalogo(
   partNumber: string,
@@ -230,31 +235,43 @@ async function cotizarDesdeCatalogo(
 export async function cotizar(partNumberInput: string): Promise<ResultadoCotizacion> {
   const partNumber = partNumberInput.trim().toUpperCase();
 
-  // 0. Catálogo interno primero: si el código ya tiene costo_jpy cargado
-  // (catálogo re-importado), se cotiza directo desde ahí y NI SIQUIERA se
-  // llama a Yumbo — el proveedor ha fallado repetidas veces (cuota
-  // agotada, respuestas malformadas, ver price_circuit_breaker). Un
-  // código marcado oem_valido=false explícito no toma este atajo: se
-  // prefiere que pase por la verificación en vivo de Yumbo en vez de
-  // servir un precio importado para un código ya señalado como
-  // problemático.
+  // 0. Datos del catálogo interno. Se leen SIEMPRE, para dos cosas
+  // distintas: el peso manual y la calidad del dato (oem_valido /
+  // nombre_confiable), que alimentan clasificarEnvio() más abajo aunque el
+  // precio venga de Impex; y costo_jpy, que es el respaldo si Impex no
+  // está disponible.
   let datosCatalogo: DatosCatalogo = DATOS_CATALOGO_DEFAULT;
   try {
     datosCatalogo = await getDatosCatalogo(partNumber);
   } catch {
-    // sin catálogo esta vez, sigue con los defaults permisivos y el
-    // flujo de Yumbo de abajo.
+    // sin catálogo esta vez: se sigue con los defaults permisivos. Si
+    // además Impex falla, la cotización sale con error_proveedor.
   }
 
-  if (datosCatalogo.oemValido !== false && datosCatalogo.costoJpy !== null) {
-    return cotizarDesdeCatalogo(partNumber, datosCatalogo);
-  }
+  // Un código marcado oem_valido=false explícito no se sirve desde el
+  // catálogo ni siquiera como respaldo: ya está señalado como problemático
+  // y se prefiere no cotizarlo antes que cotizarlo con un precio viejo.
+  const hayRespaldo = datosCatalogo.oemValido !== false && datosCatalogo.costoJpy !== null;
 
-  // 1. Obtener precio JPY desde Yumbo Japan.
-  let resultadoYumbo;
+  // 1. Precio en vivo desde Impex.
+  //
+  // ORDEN: Impex primero, base de datos como respaldo. Antes era al revés
+  // —un código con costo_jpy cortocircuitaba acá y nunca se volvía a
+  // llamar al proveedor—, lo que dejaba el precio congelado en el de la
+  // primera cotización. Con la cuenta nueva de 500 consultas/día se
+  // prefiere precio fresco, y los resguardos de impex.ts hacen que agotar
+  // la cuota degrade a este mismo respaldo en vez de romper nada.
+  //
+  // Si la cuota no diera abasto, volver al orden anterior es adelantar el
+  // bloque `if (hayRespaldo) return cotizarDesdeCatalogo(...)` a acá.
+  let resultadoProveedor;
   try {
-    resultadoYumbo = await buscarYumbo(partNumber);
+    resultadoProveedor = await buscarImpex(partNumber);
   } catch (exc) {
+    // Impex no pudo responder: sin key, cuota diaria agotada, circuito
+    // abierto, límite por minuto o error de red. Nada de eso dice algo
+    // sobre la pieza, así que se sirve el último costo conocido.
+    if (hayRespaldo) return cotizarDesdeCatalogo(partNumber, datosCatalogo);
     return {
       partNumber,
       estado: "error_proveedor",
@@ -263,7 +280,13 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  if (resultadoYumbo === null) {
+  if (resultadoProveedor === null) {
+    // Respuesta limpia del proveedor: la pieza no existe. Acá NO se cae al
+    // respaldo a propósito — impexApiFetch() descarta las piezas con
+    // is_discontinued, así que este null incluye "ya no se fabrica", y
+    // cotizarla con un precio viejo del catálogo sería venderle al cliente
+    // algo que no se puede conseguir. Cuando el proveedor responde limpio,
+    // su respuesta manda sobre el catálogo.
     return {
       partNumber,
       estado: "no_encontrado",
@@ -272,20 +295,20 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     };
   }
 
-  const { precioJpy, fuente } = resultadoYumbo;
+  const { precioJpy, fuente } = resultadoProveedor;
 
   // Peso cargado a mano por el admin (o importado) para este N° de parte
   // en el catálogo manda sobre el que trae el proveedor — ver
   // getDatosCatalogo() en repuestosCatalogo.ts. oemValido/nombreConfiable
   // se usan en clasificarEnvio() más abajo (Filtros del cotizador v3).
-  let pesoEfectivo = resultadoYumbo.pesoKg;
+  let pesoEfectivo = resultadoProveedor.pesoKg;
   if (datosCatalogo.pesoKgManual !== null) pesoEfectivo = datosCatalogo.pesoKgManual;
 
   // Nombre real solo se muestra al cliente si es confiable (inglés,
   // evaluable contra las listas de alarma). Si no, se oculta pero se sigue
   // guardando el real en el catálogo — ver registrarCotizacion() abajo.
   const nombreParaCliente = datosCatalogo.nombreConfiable
-    ? resultadoYumbo.nombre
+    ? resultadoProveedor.nombre
     : `Repuesto original [${partNumber}]`;
 
   // 2. Obtener tipo de cambio JPY → CLP.
@@ -317,8 +340,8 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   const { config: configFiltro, listas: listasFiltro } = await cargarFiltroEnvio();
   const { pesoKg: pesoFinal, clasificacion } = await conFiltroPrefijo(
     {
-      nombre: resultadoYumbo.nombre,
-      nombreNativo: resultadoYumbo.nombreNativo,
+      nombre: resultadoProveedor.nombre,
+      nombreNativo: resultadoProveedor.nombreNativo,
       pesoKg: pesoEfectivo,
       precioRepuestoClp,
       oemValido: datosCatalogo.oemValido,
@@ -326,24 +349,26 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
       fuentePeso: datosCatalogo.fuentePeso,
     },
     partNumber,
-    resultadoYumbo.maker,
+    resultadoProveedor.maker,
     configFiltro,
     listasFiltro,
   );
   const precioClpFinal = precioRepuestoClp + costoLogisticaClp + clasificacion.extraClp;
 
   // Catálogo de repuestos cotizados (para /admin/repuestos): registra o
-  // actualiza este N° de parte con el costo recién calculado. Guarda
-  // costo_jpy (precioJpy tal cual lo devolvió Yumbo) para que la PRÓXIMA
-  // cotización de este mismo código se gradúe al atajo del catálogo
-  // interno (ver cotizarDesdeCatalogo()) y ya no necesite llamar a Yumbo.
+  // actualiza este N° de parte con lo que acaba de devolver Impex —
+  // costo_jpy, costo_clp, peso y nombre. Como este camino ahora corre en
+  // CADA cotización (Impex va primero), el catálogo se refresca solo: deja
+  // de ser una foto del día en que se cotizó el código por primera vez y
+  // pasa a ser el último dato bueno conocido, que es justo lo que
+  // cotizarDesdeCatalogo() sirve cuando Impex no está disponible.
   // Nunca debe romper la cotización si Supabase falla acá.
   try {
     await registrarCotizacion({
       partNumber,
-      maker: resultadoYumbo.maker,
-      nombre: resultadoYumbo.nombre,
-      pesoKgProveedor: resultadoYumbo.pesoKg,
+      maker: resultadoProveedor.maker,
+      nombre: resultadoProveedor.nombre,
+      pesoKgProveedor: resultadoProveedor.pesoKg,
       costoClp: precioRepuestoClp,
       costoJpy: precioJpy,
     });
@@ -354,7 +379,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
   return {
     partNumber,
     estado: "ok",
-    maker: resultadoYumbo.maker,
+    maker: resultadoProveedor.maker,
     nombre: nombreParaCliente,
     precioJpy,
     tipoCambioClp: Number(tipoCambio.toFixed(6)),
@@ -363,7 +388,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     costoLogisticaClp,
     precioClpFinal,
     fuente,
-    esGenuino: resultadoYumbo.esGenuino,
+    esGenuino: resultadoProveedor.esGenuino,
     pesoKg: pesoFinal,
     envioResultado: clasificacion.resultado,
     envioExtraClp: clasificacion.extraClp,
