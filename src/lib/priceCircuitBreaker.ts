@@ -126,6 +126,14 @@ export async function recordSuccess(provider: string): Promise<void> {
     provider,
     consecutive_fails: 0,
     paused_until: null,
+    // También se limpian last_status/last_message. Antes no se tocaban, así
+    // que el último error quedaba pegado para siempre: el panel de /admin
+    // mostraba "contact with manager" del 13 de julio junto a un proveedor
+    // que llevaba semanas respondiendo bien. Un mensaje de error que
+    // sobrevive al éxito no es historial, es ruido que hace dudar de un
+    // sistema sano.
+    last_status: null,
+    last_message: null,
     updated_at: new Date().toISOString(),
   });
 }

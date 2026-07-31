@@ -37,9 +37,9 @@ export interface ResultadoCotizacion {
   fuente?: string;
   esGenuino?: boolean;
   /**
-   * Peso en kg efectivo: el cargado a mano por el admin en el catálogo
-   * de repuestos si existe, si no el que reporta el proveedor. 0 = sin
-   * dato de ningún lado (posible pieza voluminosa).
+   * Peso en kg efectivo: el que reporta el proveedor si lo trae, si no el
+   * cargado a mano por el admin en el catálogo de repuestos. 0 = sin dato
+   * de ningún lado (posible pieza voluminosa).
    */
   pesoKg?: number;
   /** Clasificación de envío según la tabla de reglas (ver sobrecargoEnvio.ts). */
@@ -297,12 +297,28 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
 
   const { precioJpy, fuente } = resultadoProveedor;
 
-  // Peso cargado a mano por el admin (o importado) para este N° de parte
-  // en el catálogo manda sobre el que trae el proveedor — ver
-  // getDatosCatalogo() en repuestosCatalogo.ts. oemValido/nombreConfiable
-  // se usan en clasificarEnvio() más abajo (Filtros del cotizador v3).
-  let pesoEfectivo = resultadoProveedor.pesoKg;
-  if (datosCatalogo.pesoKgManual !== null) pesoEfectivo = datosCatalogo.pesoKgManual;
+  // PESO: manda el que reporta Impex; el manual del catálogo es el
+  // respaldo. Es lo contrario de como estaba, y el cambio se apoya en que
+  // Impex sí trae peso —a diferencia de Yumbo, que no traía nunca (0 de 49
+  // códigos en la verificación de sobrecargoEnvio.ts), que es la razón por
+  // la que existe peso_kg_manual.
+  //
+  // 0 = el proveedor no lo reportó, no "pesa cero", así que ahí entra el
+  // manual. Si tampoco hay manual, queda en 0 y clasificarEnvio() lo trata
+  // como "sin peso" (paso 3).
+  //
+  // fuentePeso acompaña al peso que realmente se usó: si quedara la
+  // etiqueta del catálogo mientras se usa el peso de Impex, un código con
+  // Fuente_Peso "NIVEL 3 · estimado" mostraría la leyenda de peso estimado
+  // sobre un peso que el proveedor sí midió (ver la leyenda en
+  // clasificarEnvio()).
+  const usaPesoProveedor = resultadoProveedor.pesoKg > 0;
+  const pesoEfectivo = usaPesoProveedor
+    ? resultadoProveedor.pesoKg
+    : (datosCatalogo.pesoKgManual ?? 0);
+  const fuentePesoEfectiva = usaPesoProveedor
+    ? "Reportado por el proveedor (Impex)"
+    : datosCatalogo.fuentePeso;
 
   // Nombre real solo se muestra al cliente si es confiable (inglés,
   // evaluable contra las listas de alarma). Si no, se oculta pero se sigue
@@ -346,7 +362,7 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
       precioRepuestoClp,
       oemValido: datosCatalogo.oemValido,
       nombreConfiable: datosCatalogo.nombreConfiable,
-      fuentePeso: datosCatalogo.fuentePeso,
+      fuentePeso: fuentePesoEfectiva,
     },
     partNumber,
     resultadoProveedor.maker,

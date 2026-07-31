@@ -1,8 +1,9 @@
 // Catálogo de repuestos ya cotizados (una fila por N° de parte), para que
 // el admin pueda cargar el peso a mano cuando el proveedor no lo trae —
-// ver 0004_repuestos_catalogo.sql para el porqué. El peso manual, una vez
-// cargado, tiene prioridad sobre el del proveedor (ver getDatosCatalogo(),
-// usado desde cotizar()).
+// ver 0004_repuestos_catalogo.sql para el porqué. El peso manual es el
+// RESPALDO: manda el que reporta el proveedor cuando lo trae, y el manual
+// entra solo si viene en 0 (ver cotizar()). La precedencia era al revés
+// mientras el proveedor era Yumbo, que no traía peso nunca; Impex sí.
 
 import { createAdminClient } from "./supabase/admin";
 
@@ -115,7 +116,8 @@ export async function tocarCotizacion(partNumber: string): Promise<void> {
 }
 
 export interface DatosCatalogo {
-  /** Peso cargado a mano por el admin (o importado), si existe. */
+  /** Peso cargado a mano por el admin (o importado), si existe. Es el
+   * respaldo: solo se usa cuando el proveedor no reportó peso. */
   pesoKgManual: number | null;
   /** false = código marcado inválido en el catálogo. Default true (permisivo:
    * la mayoría del catálogo no tiene esta info todavía). */
