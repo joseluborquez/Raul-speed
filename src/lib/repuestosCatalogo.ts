@@ -19,9 +19,12 @@ import { createAdminClient } from "./supabase/admin";
  * refresco constante es justo lo que se quiere; con los nombres, lo que
  * ya estaba puede ser mejor que lo que llega.
  *
- * Solo frena el caso claro (latino → japonés). Un nombre en japonés que
+ * También frena el nombre vacío: Impex tiene filas con name y name_eng en
+ * blanco, y una de esas cotizaciones borraba el nombre bueno de la fila.
+ *
+ * Fuera de esos dos casos se escribe normal: un nombre en japonés que
  * llega para reemplazar otro en japonés, o cualquier cosa que llegue a una
- * fila sin nombre, se escribe normal.
+ * fila sin nombre.
  */
 export function conservarNombreGuardado(
   nombreProveedor: string,
@@ -29,6 +32,7 @@ export function conservarNombreGuardado(
 ): boolean {
   const guardado = nombreGuardado?.trim();
   if (!guardado) return false;
+  if (!nombreProveedor.trim()) return true;
   return tieneJapones(nombreProveedor) && !tieneJapones(guardado);
 }
 
@@ -101,7 +105,10 @@ export async function registrarCotizacion(input: {
     // Solo cuando el proveedor mandó un peso real — ver el comentario de
     // arriba. Omitir la columna es lo que evita que un 0 pise el dato bueno.
     ...(input.pesoKgProveedor > 0 ? { peso_kg_proveedor: input.pesoKgProveedor } : {}),
-    ...(conservarNombreGuardado(input.nombre, existente?.nombre)
+    // Mismo criterio que con el peso: si no hay nombre que escribir, se
+    // omite la columna en vez de dejar un "" que después se muestra como
+    // un repuesto sin nombre.
+    ...(!input.nombre.trim() || conservarNombreGuardado(input.nombre, existente?.nombre)
       ? {}
       : { nombre: input.nombre }),
   });

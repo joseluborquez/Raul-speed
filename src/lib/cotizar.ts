@@ -336,9 +336,16 @@ export async function cotizar(partNumberInput: string): Promise<ResultadoCotizac
     nombreCatalogo && conservarNombreGuardado(resultadoProveedor.nombre, nombreCatalogo)
       ? nombreCatalogo
       : resultadoProveedor.nombre;
-  const nombreParaCliente = datosCatalogo.nombreConfiable
-    ? nombreMostrable
-    : `Repuesto original [${partNumber}]`;
+  //
+  // El nombre vacío entra al mismo respaldo que el no confiable: Impex
+  // tiene filas con name y name_eng en blanco, y sin este freno el
+  // repuesto viaja sin nombre hasta el carrito, el pedido y el panel de
+  // admin, donde queda un "HONDA — $55.350" que parece un dato cortado
+  // (pedido cfe3ea29).
+  const nombreParaCliente =
+    datosCatalogo.nombreConfiable && nombreMostrable.trim()
+      ? nombreMostrable
+      : `Repuesto original [${partNumber}]`;
 
   // 2. Obtener tipo de cambio JPY → CLP.
   // Si el admin fijó una tasa manual (global, en Supabase), se usa para

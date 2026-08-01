@@ -51,12 +51,20 @@ const HEADERS = {
 };
 
 interface ImpexParte {
+  /** N/P completo tal como lo lista Impex, con guiones (ej. "53170-MEL-305"). */
+  part?: string;
+  /** El mismo N/P sin guiones (ej. "53170MEL305"). */
+  part_no_raw?: string;
   mark?: string;
   name?: string;
   name_eng?: string;
   weight?: number;
   price_yen: number;
   is_discontinued: boolean;
+}
+
+function sinGuiones(pn: string): string {
+  return pn.replaceAll("-", "").trim().toUpperCase();
 }
 
 /**
@@ -201,30 +209,63 @@ async function impexApiFetch(partNumber: string): Promise<ResultadoPrecioProveed
   await recordSuccess(PROVIDER);
 
   const partes: ImpexParte[] = data?.original_parts ?? [];
-  for (const parte of partes) {
-    if (parte.is_discontinued) continue;
 
-    const precioJpy = parte.price_yen;
-    if (!precioJpy || precioJpy <= 0) continue;
+  // Impex hace coincidencia PARCIAL: preguntar por "53170-MEL" (un N/P al
+  // que le falta el sufijo de diseño) devuelve 53170-MEL-305 Y
+  // 53170-MEL-006 — piezas distintas, con precios distintos. Quedarse con
+  // la primera es cotizar y cobrar un repuesto que después nadie puede
+  // identificar: pasó con el pedido cfe3ea29, que quedó pagado con
+  // "53170-MEL" como N/P y sin nombre.
+  //
+  // Por eso solo cuentan las filas cuyo número, sin guiones, es
+  // exactamente el consultado. Si no queda ninguna, para el cotizador la
+  // pieza no existe (null) y el cliente cae al flujo de solicitud manual,
+  // que es lo correcto para un código incompleto: alguien tiene que
+  // preguntarle cuál de las variantes quiere.
+  //
+  // Comparar contra `partNumber` sirve para cualquier variante de
+  // normalizar(): todas son el mismo código y solo cambian de guiones.
+  const objetivo = sinGuiones(partNumber);
+  const candidatas = partes.filter(
+    (parte) =>
+      !parte.is_discontinued &&
+      parte.price_yen > 0 &&
+      sinGuiones(parte.part_no_raw || parte.part || "") === objetivo,
+  );
+  if (candidatas.length === 0) return null;
 
-    const nombre = parte.name_eng || parte.name || "";
-    // nombreNativo solo se llena cuando hay una segunda variante genuina
-    // que evaluar (si no hay name_eng, `nombre` ya es la nativa — no hay
-    // nada que duplicar). Lo usa clasificarEnvio() (Filtros v10): un
-    // código puede venir solo en japonés y evaluar ambos nombres evita
-    // perder esa señal.
-    const nombreNativo =
-      parte.name_eng && parte.name && parte.name !== parte.name_eng ? parte.name : null;
+  // Un mismo N/P puede venir listado más de una vez (ej. bajo "HONDA" y
+  // bajo "HONDA MOTO"), y esas filas no traen los mismos datos: la de
+  // 53170-MEL-305 en "HONDA" viene sin nombre y con peso 0, la de "HONDA
+  // MOTO" trae los dos. El precio y la marca salen de la primera —es la
+  // que el proveedor lista de entrada, y tomar otra movería el precio de
+  // venta—, pero el nombre y el peso que le falten se completan desde las
+  // otras filas del MISMO número: es la misma pieza física, así que el
+  // dato es válido. Sin esto el repuesto sale sin nombre y
+  // clasificarEnvio() queda trabajando a ciegas con peso 0.
+  const elegida = candidatas[0];
+  const conNombre = candidatas.find((parte) => (parte.name_eng || parte.name || "").trim());
+  const conPeso = candidatas.find((parte) => Number(parte.weight) > 0);
 
-    return {
-      precioJpy: Math.trunc(precioJpy),
-      fuente: "impex-jp.com",
-      maker: parte.mark ?? "",
-      nombre,
-      nombreNativo,
-      esGenuino: true,
-      pesoKg: Number(parte.weight) || 0,
-    };
-  }
-  return null;
+  const fuenteNombre = (elegida.name_eng || elegida.name || "").trim() ? elegida : conNombre;
+  const nombre = fuenteNombre?.name_eng || fuenteNombre?.name || "";
+  // nombreNativo solo se llena cuando hay una segunda variante genuina
+  // que evaluar (si no hay name_eng, `nombre` ya es la nativa — no hay
+  // nada que duplicar). Lo usa clasificarEnvio() (Filtros v10): un
+  // código puede venir solo en japonés y evaluar ambos nombres evita
+  // perder esa señal.
+  const nombreNativo =
+    fuenteNombre?.name_eng && fuenteNombre.name && fuenteNombre.name !== fuenteNombre.name_eng
+      ? fuenteNombre.name
+      : null;
+
+  return {
+    precioJpy: Math.trunc(elegida.price_yen),
+    fuente: "impex-jp.com",
+    maker: elegida.mark ?? "",
+    nombre,
+    nombreNativo,
+    esGenuino: true,
+    pesoKg: Number(elegida.weight) || Number(conPeso?.weight) || 0,
+  };
 }
